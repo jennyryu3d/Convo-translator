@@ -1,0 +1,310 @@
+/* =====================================================================
+   ConvoTrans Design System — Colors & Type
+   ---------------------------------------------------------------------
+   "Malachite & gold" palette: deep emerald forest cut with copper veins
+   and warmed by a pale cream. Premium, organic, hushed — the feeling
+   of finally hearing someone clearly through the noise.
+
+   Display type substitutes for the brand's "Armstrong" futuristic
+   wide geometric. Chakra Petch is the closest free match — squared
+   geometry with subtle angular cuts; multilingual (Latin/Thai) which
+   matters for a translation app.
+   ===================================================================== */
+
+@import url('https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap');
+
+:root {
+  /* ---------- BRAND PALETTE (from reference image) ---------- */
+  --brand-cream:   #EEE8B2;  /* pale yellow — softest light */
+  --brand-copper:  #C18D52;  /* warm gold — accent / decorative */
+  --brand-ink:     #081B1B;  /* near-black with green undertone */
+  --brand-forest:  #203B37;  /* deep emerald — primary deep */
+  --brand-sage:    #5A8F76;  /* mid green — supporting */
+  --brand-mint:    #96CDB0;  /* light jade — primary action */
+
+  /* ---------- EXTENDED RAMPS (derived) ---------- */
+  /* Mint — primary action color */
+  --mint-50:   #f0faf5;
+  --mint-100:  #dcf2e6;
+  --mint-200:  #bce4ce;
+  --mint-300:  #96CDB0;  /* = brand-mint */
+  --mint-400:  #7ab895;
+  --mint-500:  #5A8F76;  /* = brand-sage */
+  --mint-600:  #487762;
+  --mint-700:  #385e4d;
+  --mint-800:  #29473a;
+  --mint-900:  #1a2f26;
+
+  /* Forest — deep supporting tone */
+  --forest-50:   #e9efed;
+  --forest-100:  #c8d6d2;
+  --forest-200:  #97b3ad;
+  --forest-300:  #6e8e88;
+  --forest-400:  #4a6e68;
+  --forest-500:  #2f524d;
+  --forest-600:  #203B37;  /* = brand-forest */
+  --forest-700:  #182d2a;
+  --forest-800:  #102220;
+  --forest-900:  #081B1B;  /* = brand-ink */
+
+  /* Cream & Copper — warm neutrals */
+  --cream-50:   #fcf9e8;
+  --cream-100:  #f7f1cc;
+  --cream-200:  #f3eabf;
+  --cream-300:  #EEE8B2;  /* = brand-cream */
+  --cream-400:  #e0d28a;
+  --cream-500:  #d4b06f;
+  --cream-600:  #C18D52;  /* = brand-copper */
+  --cream-700:  #9d7242;
+  --cream-800:  #735233;
+  --cream-900:  #4a3522;
+
+  /* True neutrals (cool-green-leaning to harmonize with forest) */
+  --gray-0:    #ffffff;
+  --gray-50:   #f7f9f8;
+  --gray-100:  #eef2f0;
+  --gray-200:  #dde4e1;
+  --gray-300:  #c0cbc6;
+  --gray-400:  #8d9a96;
+  --gray-500:  #5f6b67;
+  --gray-600:  #444e4b;
+  --gray-700:  #2f3735;
+  --gray-800:  #1d2422;
+  --gray-900:  #0f1413;
+
+  /* Semantic status — tuned to live alongside the green palette */
+  --success:   #5A8F76;   /* reuse sage for harmony */
+  --warning:   #C18D52;   /* reuse copper */
+  --danger:    #b84a3a;   /* warm red, not too saturated */
+  --info:      var(--mint-500);
+
+  /* ---------- SEMANTIC TOKENS (light mode) ---------- */
+  --bg:            var(--cream-50);    /* app background */
+  --bg-elev:       var(--gray-0);      /* cards, sheets */
+  --bg-sunken:     var(--cream-100);   /* inputs, recessed wells */
+  --bg-overlay:    rgba(8, 27, 27, 0.6);
+
+  --fg1:           var(--forest-900);  /* primary text */
+  --fg2:           var(--forest-600);  /* secondary text */
+  --fg3:           var(--gray-500);    /* tertiary/meta */
+  --fg-on-mint:    var(--forest-900);  /* text on bright mint */
+  --fg-on-forest:  var(--cream-100);   /* text on deep forest */
+  --fg-on-cream:   var(--forest-900);
+
+  --border:        var(--gray-200);
+  --border-strong: var(--gray-300);
+  --border-focus:  var(--mint-500);
+
+  --primary:        var(--mint-300);
+  --primary-hover:  var(--mint-400);
+  --primary-press:  var(--mint-500);
+  --primary-fg:     var(--forest-900);
+
+  --accent:         var(--cream-600);   /* copper — for decorative highlights */
+  --accent-hover:   var(--cream-700);
+  --accent-press:   var(--cream-800);
+  --accent-fg:      var(--cream-50);
+
+  /* ---------- SHADOWS — quiet, ink-tinted ---------- */
+  --shadow-xs:  0 1px 2px rgba(8, 27, 27, 0.06);
+  --shadow-sm:  0 1px 3px rgba(8, 27, 27, 0.08), 0 1px 2px rgba(8, 27, 27, 0.05);
+  --shadow-md:  0 4px 12px rgba(8, 27, 27, 0.10), 0 2px 4px rgba(8, 27, 27, 0.05);
+  --shadow-lg:  0 12px 28px rgba(8, 27, 27, 0.14), 0 4px 8px rgba(8, 27, 27, 0.05);
+  --shadow-xl:  0 24px 48px rgba(8, 27, 27, 0.20), 0 8px 16px rgba(8, 27, 27, 0.10);
+  --shadow-mint:   0 8px 24px rgba(150, 205, 176, 0.45);
+  --shadow-copper: 0 8px 24px rgba(193, 141, 82, 0.32);
+  --shadow-inset:  inset 0 1px 2px rgba(8, 27, 27, 0.07);
+
+  /* ---------- RADII ---------- */
+  --radius-xs: 4px;
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 18px;
+  --radius-xl: 24px;
+  --radius-2xl: 32px;
+  --radius-pill: 999px;
+
+  /* ---------- SPACING (4px base) ---------- */
+  --space-0: 0;
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-10: 40px;
+  --space-12: 48px;
+  --space-16: 64px;
+  --space-20: 80px;
+  --space-24: 96px;
+
+  /* ---------- TYPE FAMILIES ---------- */
+  --font-display:  'Chakra Petch', 'Armstrong', 'Eurostile', system-ui, sans-serif;
+  --font-body:     'Plus Jakarta Sans', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-mono:     'JetBrains Mono', 'SF Mono', Menlo, monospace;
+
+  /* ---------- TYPE SCALE ---------- */
+  --text-xs:   12px;
+  --text-sm:   14px;
+  --text-base: 16px;
+  --text-md:   18px;
+  --text-lg:   20px;
+  --text-xl:   24px;
+  --text-2xl:  30px;
+  --text-3xl:  38px;
+  --text-4xl:  48px;
+  --text-5xl:  64px;
+  --text-6xl:  84px;
+
+  --leading-tight: 1.1;
+  --leading-snug:  1.25;
+  --leading-norm:  1.5;
+  --leading-loose: 1.7;
+
+  --tracking-tight:  -0.02em;
+  --tracking-normal: 0;
+  --tracking-wide:   0.04em;
+  --tracking-wider:  0.12em;
+
+  /* ---------- MOTION ---------- */
+  --ease-out:   cubic-bezier(0.22, 0.61, 0.36, 1);
+  --ease-in:    cubic-bezier(0.55, 0, 0.68, 0.2);
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --dur-fast:   140ms;
+  --dur-base:   220ms;
+  --dur-slow:   400ms;
+}
+
+/* ===================== DARK MODE ===================== */
+:root[data-theme="dark"] {
+  --bg:            var(--forest-900);  /* deep ink */
+  --bg-elev:       var(--forest-800);
+  --bg-sunken:     var(--forest-900);
+  --bg-overlay:    rgba(0, 0, 0, 0.7);
+
+  --fg1:           var(--cream-100);
+  --fg2:           var(--cream-300);
+  --fg3:           var(--forest-300);
+
+  --border:        rgba(255, 255, 255, 0.08);
+  --border-strong: rgba(255, 255, 255, 0.16);
+  --border-focus:  var(--mint-300);
+
+  --primary:        var(--mint-300);
+  --primary-hover:  var(--mint-200);
+  --primary-press:  var(--mint-100);
+  --primary-fg:     var(--forest-900);
+}
+
+/* ===================== SEMANTIC TEXT STYLES ===================== */
+
+.h-display,
+h1.display {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: clamp(48px, 7vw, var(--text-6xl));
+  line-height: var(--leading-tight);
+  letter-spacing: var(--tracking-tight);
+  color: var(--fg1);
+}
+
+.h1, h1 {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: var(--text-4xl);
+  line-height: var(--leading-tight);
+  letter-spacing: var(--tracking-tight);
+  color: var(--fg1);
+}
+
+.h2, h2 {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: var(--text-3xl);
+  line-height: var(--leading-snug);
+  letter-spacing: var(--tracking-tight);
+  color: var(--fg1);
+}
+
+.h3, h3 {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: var(--text-2xl);
+  line-height: var(--leading-snug);
+  color: var(--fg1);
+}
+
+.h4, h4 {
+  font-family: var(--font-body);
+  font-weight: 700;
+  font-size: var(--text-xl);
+  line-height: var(--leading-snug);
+  color: var(--fg1);
+}
+
+.h5, h5 {
+  font-family: var(--font-body);
+  font-weight: 600;
+  font-size: var(--text-lg);
+  line-height: var(--leading-snug);
+  color: var(--fg1);
+}
+
+.eyebrow {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: var(--text-xs);
+  letter-spacing: var(--tracking-wider);
+  text-transform: uppercase;
+  color: var(--mint-500);
+}
+
+.p, p {
+  font-family: var(--font-body);
+  font-weight: 400;
+  font-size: var(--text-base);
+  line-height: var(--leading-norm);
+  color: var(--fg2);
+}
+
+.lead {
+  font-family: var(--font-body);
+  font-weight: 400;
+  font-size: var(--text-md);
+  line-height: var(--leading-norm);
+  color: var(--fg2);
+}
+
+.small {
+  font-family: var(--font-body);
+  font-weight: 500;
+  font-size: var(--text-sm);
+  line-height: var(--leading-norm);
+  color: var(--fg2);
+}
+
+.meta {
+  font-family: var(--font-body);
+  font-weight: 500;
+  font-size: var(--text-xs);
+  letter-spacing: 0.02em;
+  color: var(--fg3);
+}
+
+.code, code, kbd, samp {
+  font-family: var(--font-mono);
+  font-size: 0.92em;
+  background: var(--bg-sunken);
+  padding: 2px 6px;
+  border-radius: var(--radius-xs);
+  color: var(--fg1);
+}
+
+html, body {
+  font-family: var(--font-body);
+  color: var(--fg1);
+  background: var(--bg);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
