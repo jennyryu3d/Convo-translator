@@ -1,0 +1,7 @@
+# macOS
+.DS_Store
+# editor noise
+.vscode/
+.idea/
+# bundler output (not needed for GitHub Pages)
+Con-trans-single-file.html
