@@ -72,13 +72,16 @@ window.CT_HISTORY = [
 ];
 
 // Flatten for searching: include session metadata so we can group results.
+// Searches BOTH the demo history and the user's own saved conversations.
 window.CT_searchAll = function(q) {
   const norm = (s) => String(s || '').toLowerCase();
   const needle = norm(q).trim();
   if (!needle) return [];
   const results = [];
-  for (const sess of window.CT_HISTORY) {
-    for (let i = 0; i < sess.messages.length; i++) {
+  const saved = (window.CT_SAVED && window.CT_SAVED.all()) || [];
+  const all = [...saved, ...window.CT_HISTORY];
+  for (const sess of all) {
+    for (let i = 0; i < (sess.messages || []).length; i++) {
       const m = sess.messages[i];
       const blob = norm(m.orig) + ' ' + norm(m.trans);
       if (blob.includes(needle)) {

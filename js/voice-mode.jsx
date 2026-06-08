@@ -8,13 +8,15 @@
 // • Live waveform / pulsing while listening. Live transcription as it streams.
 // • TTS speaks the translation out loud so the other person hears English.
 
-function VoiceMode({ palette, dark, onClose, onLog }) {
+function VoiceMode({ palette, dark, onClose, onLog, target = 'EN', native = 'KO' }) {
   const c = palette;
   const I = window.CT_ICONS;
 
+  const targetLang = window.CT_LANG.byCode(target);  // conversation language (the OTHER person)
+  const nativeLang = window.CT_LANG.byCode(native);  // my own language
+
   // active = which side is currently speaking ('me' | 'them' | null)
   const [active, setActive] = React.useState(null);
-  // 'tap' = single press to record one phrase; 'hands-free' = auto-toggle on silence
   const [recordMode, setRecordMode] = React.useState('tap');
   // live transcription
   const [myInterim, setMyInterim] = React.useState('');
@@ -24,52 +26,88 @@ function VoiceMode({ palette, dark, onClose, onLog }) {
   const [themFinal, setThemFinal] = React.useState('');
   const [themTrans, setThemTrans] = React.useState('');
   const [translating, setTranslating] = React.useState(false);
+  const [sttSupported] = React.useState(() => window.CT_RECOGNIZE && window.CT_RECOGNIZE.supported());
 
-  // Demo simulation: cycles through scripted turns so the UI demos without mic permission.
-  // In a real build this would attach to webkitSpeechRecognition.
-  const demoScript = React.useRef([
-    { side: 'me', interim: ['저희가 다음 주', '저희가 다음 주에', '저희가 다음 주에 새로운', '저희가 다음 주에 새로운 디자인을 보여드릴 수 있어요'], final: '저희가 다음 주에 새로운 디자인을 보여드릴 수 있어요.', trans: 'We can show you the new design next week.' },
-    { side: 'them', interim: ['That sounds', 'That sounds great', "That sounds great. Can you", "That sounds great. Can you walk me through the timeline?"], final: "That sounds great. Can you walk me through the timeline?", trans: '좋네요. 일정을 자세히 설명해 주실 수 있나요?' },
-  ]);
+  const recRef = React.useRef(null);
 
-  // Simulate a "tap" — picks the side, streams interim, then finalizes + translates + TTS
-  function startListening(side) {
-    if (active) return; // already listening
-    setActive(side);
+  // Stop any active recognition on unmount.
+  React.useEffect(() => () => { if (recRef.current) recRef.current.abort(); }, []);
+
+  // Translate helper using Claude.
+  async function translate(text, fromLang, toLang) {
+    try {
+      const res = await window.CT_API.complete(
+        `Translate this ${fromLang.native} to natural ${toLang.native} (polite, conversational register). Output only the ${toLang.native} translation — no quotes, no explanation.\n\n${fromLang.native}: ${text}`
+      );
+      return String(res).trim().replace(/^["'`]|["'`]$/g, '');
+    } catch (e) {
+      return '(translation unavailable)';
+    }
+  }
+
+  // Finalize a turn: translate + TTS + log.
+  async function finalizeTurn(side, spoken) {
+    if (!spoken || !spoken.trim()) { setActive(null); return; }
+    setTranslating(true);
+    // me: speak native → translate to target → TTS target aloud (for the other person)
+    // them: speak target → translate to native → show to me
+    const fromLang = side === 'me' ? nativeLang : targetLang;
+    const toLang   = side === 'me' ? targetLang : nativeLang;
+    const out = await translate(spoken, fromLang, toLang);
+    if (side === 'me') {
+      setMyTrans(out);
+      window.CT_SPEAK && window.CT_SPEAK.once(out, toLang.locale);
+    } else {
+      setThemTrans(out);
+    }
+    setTranslating(false);
+    setActive(null);
+    onLog && onLog(side === 'me'
+      ? { side: 'me', orig: spoken, trans: out, inputKind: 'foreign' }
+      : { side: 'them', orig: spoken, trans: out });
+  }
+
+  // Start/stop real speech recognition for a side.
+  function toggleListening(side) {
+    // If already listening on this side → stop.
+    if (active === side && recRef.current) {
+      recRef.current.stop();
+      return;
+    }
+    if (active) return; // other side busy
+
+    if (!sttSupported) {
+      // Graceful fallback: no STT engine. Inform the user.
+      alert('이 브라우저는 음성 인식을 지원하지 않아요. Chrome 또는 Safari에서 사용해 주세요. (텍스트 입력은 채팅 화면에서 가능합니다)');
+      return;
+    }
+
+    // Reset this side's text.
     if (side === 'me') { setMyInterim(''); setMyFinal(''); setMyTrans(''); }
     else { setThemInterim(''); setThemFinal(''); setThemTrans(''); }
 
-    const turn = demoScript.current.find(t => t.side === side) || demoScript.current[0];
-    let i = 0;
-    const tick = setInterval(() => {
-      if (i >= turn.interim.length) {
-        clearInterval(tick);
-        // finalize
-        if (side === 'me') { setMyInterim(''); setMyFinal(turn.final); }
-        else { setThemInterim(''); setThemFinal(turn.final); }
-        // translate
-        setTranslating(true);
-        setTimeout(() => {
-          if (side === 'me') {
-            setMyTrans(turn.trans);
-            // speak English aloud to the other person
-            window.CT_SPEAK?.once(turn.trans, 'en-US');
-          } else {
-            setThemTrans(turn.trans);
-          }
-          setTranslating(false);
-          setActive(null);
-          // commit to chat log
-          onLog?.(side === 'me'
-            ? { side: 'me', orig: turn.final, trans: turn.trans }
-            : { side: 'them', orig: turn.final, trans: turn.trans });
-        }, 600);
-        return;
-      }
-      if (side === 'me') setMyInterim(turn.interim[i]);
-      else setThemInterim(turn.interim[i]);
-      i++;
-    }, 280);
+    const locale = side === 'me' ? nativeLang.locale : targetLang.locale;
+    const rec = window.CT_RECOGNIZE.create(locale, {
+      continuous: recordMode === 'hands-free',
+      onInterim: (t) => { side === 'me' ? setMyInterim(t) : setThemInterim(t); },
+      onFinal:   (t) => { side === 'me' ? setMyFinal(t) : setThemFinal(t); },
+      onError:   (err) => {
+        setActive(null);
+        if (err === 'not-allowed' || err === 'service-not-allowed') {
+          alert('마이크 권한이 필요해요. 브라우저 설정에서 마이크를 허용해 주세요.');
+        }
+      },
+      onEnd: (finalText) => {
+        if (side === 'me') setMyInterim('');
+        else setThemInterim('');
+        finalizeTurn(side, finalText);
+        recRef.current = null;
+      },
+    });
+    if (!rec) return;
+    recRef.current = rec;
+    setActive(side);
+    rec.start();
   }
 
   return (
@@ -117,22 +155,23 @@ function VoiceMode({ palette, dark, onClose, onLog }) {
         }}>{I.settings}</button>
       </div>
 
-      {/* MY HALF — top */}
+      {/* MY HALF — top: I speak my own language → other person hears target */}
       <VoicePanel
         c={c} side="me"
         active={active === 'me'}
-        title="내 차례 · 한국어"
-        subtitle="누르고 한국어로 말하면 상대에게 영어로 들려줍니다"
-        srcLang="한국어"
-        tgtLang="English"
+        title={`내 차례 · ${nativeLang.name}`}
+        subtitle={`누르고 ${nativeLang.name}로 말하면 상대에게 ${targetLang.name}로 들려줍니다`}
+        srcLang={nativeLang.name}
+        tgtLang={targetLang.name}
         interim={myInterim}
         finalText={myFinal}
         translation={myTrans}
         translating={translating && active === 'me'}
-        onTap={() => startListening('me')}
-        privateLabel="한글 원문 — 나만 보임"
-        publicLabel="상대에게 들리는 영어"
-        flipped={false}
+        onTap={() => toggleListening('me')}
+        privateLabel={`내 ${nativeLang.name} 원문 — 나만 보임`}
+        publicLabel={`상대에게 들리는 ${targetLang.name}`}
+        listening={active === 'me'}
+        ttsLocale={targetLang.locale}
       />
 
       {/* divider with central control */}
@@ -162,29 +201,30 @@ function VoiceMode({ palette, dark, onClose, onLog }) {
         </div>
       </div>
 
-      {/* THEIR HALF — bottom, flipped so the screen is "shareable" between two people across a table */}
+      {/* THEIR HALF — bottom: other person speaks target → I read my own language */}
       <VoicePanel
         c={c} side="them"
         active={active === 'them'}
-        title="상대 차례 · English"
-        subtitle="상대가 영어로 말하면 한국어로 보여줍니다"
-        srcLang="English"
-        tgtLang="한국어"
+        title={`상대 차례 · ${targetLang.name}`}
+        subtitle={`상대가 ${targetLang.name}로 말하면 ${nativeLang.name}로 보여줍니다`}
+        srcLang={targetLang.name}
+        tgtLang={nativeLang.name}
         interim={themInterim}
         finalText={themFinal}
         translation={themTrans}
         translating={translating && active === 'them'}
-        onTap={() => startListening('them')}
-        privateLabel="실제 들린 영어"
-        publicLabel="내가 보는 한글 번역 — 나만 보임"
-        flipped={false}
+        onTap={() => toggleListening('them')}
+        privateLabel={`실제 들린 ${targetLang.name}`}
+        publicLabel={`내가 보는 ${nativeLang.name} 번역 — 나만 보임`}
+        listening={active === 'them'}
+        ttsLocale={nativeLang.locale}
       />
     </div>
   );
 }
 
 // ── One half-panel ──────────────────────────────────────────────────────
-function VoicePanel({ c, side, active, title, subtitle, srcLang, tgtLang, interim, finalText, translation, translating, onTap, privateLabel, publicLabel, flipped }) {
+function VoicePanel({ c, side, active, title, subtitle, srcLang, tgtLang, interim, finalText, translation, translating, onTap, privateLabel, publicLabel, listening, ttsLocale }) {
   const isMe = side === 'me';
   const accent = isMe ? c.primary : c.accent2;
   const accentSoft = isMe ? c.primarySoft : (c.themAvatarBg);
@@ -296,7 +336,7 @@ function VoicePanel({ c, side, active, title, subtitle, srcLang, tgtLang, interi
               {/* replay listen — only useful for the translated side */}
               <button onClick={(e) => {
                 e.stopPropagation();
-                window.CT_SPEAK?.once(translation, isMe ? 'en-US' : 'ko-KR');
+                window.CT_SPEAK && window.CT_SPEAK.once(translation, ttsLocale || 'en-US');
               }} style={{
                 width: 32, height: 32, borderRadius: 999, border: 'none', flexShrink: 0,
                 background: isMe ? 'rgba(255,255,255,0.22)' : c.bg,

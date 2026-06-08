@@ -87,7 +87,7 @@ function SuggNumberedStack({ palette, suggestions, dark, max = 3, onPick }) {
         display: 'flex', alignItems: 'center', gap: 4,
         boxShadow: `0 4px 10px ${c.ai}55`,
       }}>
-        {sparkleIcon} AI 추천 답변 · 번호로 빠른 선택
+        {sparkleIcon} AI 제안 · 번호로 빠른 선택
       </div>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 6 }}>
         {list.map((s, i) => (
@@ -148,7 +148,7 @@ function SuggCardDeck({ palette, suggestions, dark, max = 3, onPick }) {
           fontSize: 10, fontWeight: 800, color: c.ai, letterSpacing: 0.6,
           textTransform: 'uppercase',
         }}>
-          {sparkleIcon} AI 답변 카드 · {idx + 1}/{list.length}
+          {sparkleIcon} AI 제안 · {idx + 1}/{list.length}
         </span>
         <div style={{ display: 'flex', gap: 4 }}>
           {list.map((_, i) => (
@@ -168,64 +168,65 @@ function SuggCardDeck({ palette, suggestions, dark, max = 3, onPick }) {
         {idx < list.length - 1 && (
           <div style={{
             position: 'absolute', inset: 0, top: 8, left: 6, right: 6,
-            background: c.surface, borderRadius: 16,
-            border: `1px solid ${c.divider}`,
-            transform: 'scale(0.96)', opacity: 0.6, zIndex: 0,
+            background: c.ai, borderRadius: 16,
+            opacity: 0.4, zIndex: 0,
+            transform: 'scale(0.96)',
           }} />
         )}
         <div style={{
           position: 'relative', zIndex: 1,
-          background: c.surface, borderRadius: 16,
+          background: c.ai, borderRadius: 16,
           padding: '16px 16px 14px',
-          border: `2px solid ${c.ai}`,
-          boxShadow: `0 8px 24px ${c.ai}22`,
+          boxShadow: `0 8px 24px ${c.ai}55`,
         }}>
           <div style={{
-            display: 'inline-flex', alignItems: 'center', gap: 5,
-            fontSize: 10, fontWeight: 800, color: tt.ink, background: tt.bg,
-            padding: '3px 10px', borderRadius: 999, marginBottom: 10,
-            letterSpacing: 0.4,
-          }}>
-            <span style={{ width: 6, height: 6, borderRadius: 999, background: tt.accent }} />
-            {s.tone}
-          </div>
-          <div style={{
-            fontSize: 17, color: c.ink, fontWeight: 600, lineHeight: 1.4,
+            fontSize: 17, color: c.aiInk || '#fff', fontWeight: 700, lineHeight: 1.4,
             letterSpacing: '-0.2px', marginBottom: 8,
           }}>{s.en}</div>
           <div style={{
-            fontSize: 12, color: c.ink3, lineHeight: 1.4,
-            paddingTop: 8, borderTop: `1px dashed ${c.divider}`,
+            fontSize: 12, color: c.aiInk || '#fff', opacity: 0.85, lineHeight: 1.4,
+            paddingTop: 8, borderTop: `1px dashed ${c.aiInk ? c.aiInk + '44' : 'rgba(255,255,255,0.3)'}`,
           }}>
-            <span style={{ fontSize: 9, fontWeight: 700, color: c.accent2, marginRight: 5, letterSpacing: 0.4, textTransform: 'uppercase' }}>한글 뜻</span>
             {s.ko}
           </div>
         </div>
       </div>
-      {/* control row: prev/use/next */}
-      <div style={{ display: 'flex', gap: 8, marginTop: 10, alignItems: 'center' }}>
+      {/* control row: single capsule, center-bright gradient, arrows inside both ends */}
+      <div style={{
+        display: 'flex', alignItems: 'stretch', marginTop: 12,
+        borderRadius: 999, overflow: 'hidden',
+        background: `linear-gradient(90deg, ${c.aiDeep || c.ai} 0%, ${c.ai} 28%, ${c.ai} 72%, ${c.aiDeep || c.ai} 100%)`,
+        boxShadow: `0 6px 18px ${c.ai}66, inset 0 1px 0 rgba(255,255,255,0.25)`,
+      }}>
         <button onClick={() => setIdx(Math.max(0, idx - 1))} disabled={idx === 0} style={{
-          width: 40, height: 40, borderRadius: 999, border: 'none', cursor: idx === 0 ? 'default' : 'pointer',
-          background: idx === 0 ? c.divider : c.surface, color: idx === 0 ? c.ink3 : c.ink2,
-          fontSize: 18, fontWeight: 700, flexShrink: 0,
-          boxShadow: idx === 0 ? 'none' : '0 1px 3px rgba(0,0,0,0.08)',
-        }}>‹</button>
-        <button onClick={() => onPick?.(s)} style={{
-          flex: 1, height: 40, borderRadius: 999, border: 'none', cursor: 'pointer',
-          background: c.ai, color: '#fff',
-          fontSize: 13, fontWeight: 700,
-          display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
-        }}>
-          이 답변 사용하기 {window.CT_ICONS.arrow}
+          width: 50, border: 'none', cursor: idx === 0 ? 'default' : 'pointer',
+          background: 'transparent', color: '#fff',
+          opacity: idx === 0 ? 0.3 : 1,
+          display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+          filter: idx === 0 ? 'none' : 'drop-shadow(0 0 5px rgba(255,255,255,0.9))',
+        }} aria-label="이전 답변">
+          <svg width="25" height="25" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" strokeWidth="3.6" strokeLinecap="round" strokeLinejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
         </button>
+
+        <button onClick={() => onPick?.(s)} style={{
+          flex: 1, height: 48, border: 'none', cursor: 'pointer',
+          background: 'transparent', color: '#fff',
+          fontSize: 14, fontWeight: 800, letterSpacing: '0.01em',
+          display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7,
+        }}>
+          이 답변 사용하기
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14m-5-5 5 5-5 5"/></svg>
+        </button>
+
         <button onClick={() => setIdx(Math.min(list.length - 1, idx + 1))} disabled={idx === list.length - 1} style={{
-          width: 40, height: 40, borderRadius: 999, border: 'none',
-          cursor: idx === list.length - 1 ? 'default' : 'pointer',
-          background: idx === list.length - 1 ? c.divider : c.surface,
-          color: idx === list.length - 1 ? c.ink3 : c.ink2,
-          fontSize: 18, fontWeight: 700, flexShrink: 0,
-          boxShadow: idx === list.length - 1 ? 'none' : '0 1px 3px rgba(0,0,0,0.08)',
-        }}>›</button>
+          width: 50, border: 'none', cursor: idx === list.length - 1 ? 'default' : 'pointer',
+          background: 'transparent', color: '#fff',
+          opacity: idx === list.length - 1 ? 0.3 : 1,
+          display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+          filter: idx === list.length - 1 ? 'none' : 'drop-shadow(0 0 5px rgba(255,255,255,0.9))',
+        }} aria-label="다음 답변">
+          <svg width="25" height="25" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" strokeWidth="3.6" strokeLinecap="round" strokeLinejoin="round"><path d="M9 18l6-6-6-6"/></svg>
+        </button>
       </div>
     </div>
   );
@@ -245,7 +246,7 @@ function SuggSpeechBalloons({ palette, suggestions, dark, max = 3, onPick }) {
         fontSize: 10, fontWeight: 800, color: c.ai, letterSpacing: 0.6,
         textTransform: 'uppercase', marginLeft: 4, marginBottom: 6,
       }}>
-        {sparkleIcon} 캐릭터가 알려주는 답변
+        {sparkleIcon} AI 제안
       </div>
       <div style={{ display: 'flex', alignItems: 'flex-start', gap: 6 }}>
         <div style={{ flexShrink: 0, paddingTop: 12 }}>

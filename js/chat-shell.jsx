@@ -21,20 +21,23 @@ const I = {
 window.CT_ICONS = I;
 
 // ── Top app bar ────────────────────────────────────────────────────────
-function TopBar({ palette, dark, onToggleDark, showMascot = true, onSearch, target = 'EN', native = 'KO', onPickTarget, onPickNative }) {
+function TopBar({ palette, dark, onToggleDark, showMascot = true, onSearch, onSettings, onHistory, onSaveConvo, target = 'EN', native = 'KO', onPickTarget, onPickNative }) {
   const c = palette;
   const tgt = window.CT_LANG.byCode(target);
   const nat = window.CT_LANG.byCode(native);
   return (
     <div style={{
-      padding: '10px 16px 12px',
+      padding: '10px 16px 14px',
       background: c.surface,
       borderBottom: `1px solid ${c.divider}`,
+      boxShadow: '0 4px 16px rgba(0,40,84,0.10)',
+      position: 'relative', zIndex: 5,
       display: 'flex', flexDirection: 'column', gap: 10,
     }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          {showMascot && <Mascot mood="happy" size={32} dark={dark} />}
+          <img src="convotrans-design/assets/app-icon.png?v=17" alt="ConvoTrans"
+            style={{ width: 34, height: 34, borderRadius: 9, flexShrink: 0, boxShadow: '0 1px 3px rgba(8,27,27,0.18)' }} />
           <div>
             <div style={{
               fontSize: 17, fontWeight: 700, color: c.ink, letterSpacing: '-0.01em', lineHeight: 1.1,
@@ -53,9 +56,12 @@ function TopBar({ palette, dark, onToggleDark, showMascot = true, onSearch, targ
               <circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/>
             </svg>
           </IconBtn>
+          <IconBtn palette={c} onClick={onSaveConvo} ariaLabel="save conversation">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>
+          </IconBtn>
           <IconBtn palette={c} onClick={onToggleDark} ariaLabel="theme">{dark ? window.CT_ICONS.sun : window.CT_ICONS.moon}</IconBtn>
-          <IconBtn palette={c}>{window.CT_ICONS.history}</IconBtn>
-          <IconBtn palette={c}>{window.CT_ICONS.settings}</IconBtn>
+          <IconBtn palette={c} onClick={onHistory} ariaLabel="history">{window.CT_ICONS.history}</IconBtn>
+          <IconBtn palette={c} onClick={onSettings} ariaLabel="settings">{window.CT_ICONS.settings}</IconBtn>
         </div>
       </div>
 
@@ -88,8 +94,9 @@ function LangSlot({ c, role, lang, label, sub, onClick }) {
   return (
     <button onClick={onClick} style={{
       flex: 1, display: 'flex', alignItems: 'center', gap: 9,
-      background: c.bg, borderRadius: 14, padding: '8px 10px 8px 8px',
-      border: `1.5px solid ${isTarget ? tint : c.divider}`,
+      background: '#3A5A78',
+      borderRadius: 14, padding: '8px 10px 8px 8px',
+      border: `1.5px solid ${isTarget ? tint : '#2C4660'}`,
       cursor: 'pointer', textAlign: 'left',
       transition: 'all 140ms cubic-bezier(0.22, 0.61, 0.36, 1)',
       fontFamily: 'inherit',
@@ -97,21 +104,21 @@ function LangSlot({ c, role, lang, label, sub, onClick }) {
       <window.LangChip code={lang.code} size={36} />
       <div style={{ flex: 1, minWidth: 0 }}>
         <div style={{
-          fontSize: 10, fontWeight: 600, color: tint, letterSpacing: '0.12em',
+          fontSize: 10, fontWeight: 600, color: isTarget ? '#9FD8FF' : '#7FE6EE', letterSpacing: '0.12em',
           textTransform: 'uppercase', lineHeight: 1.1, marginBottom: 2,
           fontFamily: "'Chakra Petch', system-ui, sans-serif",
         }}>{label}</div>
         <div style={{
           display: 'flex', alignItems: 'center', gap: 3,
-          fontSize: 14, fontWeight: 700, color: c.ink, lineHeight: 1.2,
+          fontSize: 14, fontWeight: 700, color: '#FFFFFF', lineHeight: 1.2,
           whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
         }}>
           {lang.name}
-          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke={c.ink3} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, marginLeft: 2 }}>
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.7)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, marginLeft: 2 }}>
             <polyline points="6 9 12 15 18 9"/>
           </svg>
         </div>
-        <div style={{ fontSize: 10, color: c.ink3, marginTop: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+        <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.6)', marginTop: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
           {sub}
         </div>
       </div>

@@ -1,54 +1,54 @@
-// Shared mock conversation + brand tokens — ConvoTrans design system applied.
-// Mapped to the "malachite & gold" palette: mint + sage + forest + ink + cream + copper.
+// Shared mock conversation + brand tokens.
+// Palette: ConvoTrans blue — navy #002854, blue #006898, cyan #05A9CF, greys.
 window.CT_BRAND = {
   light: {
-    bg: '#FCF9E8',           // cream-50 — warm off-white app surface
-    surface: '#FFFFFF',      // gray-0 cards
-    ink: '#081B1B',          // forest-900 / brand-ink
-    ink2: '#203B37',         // forest-600 secondary
-    ink3: '#5f6b67',         // gray-500 meta
-    divider: '#dde4e1',      // gray-200
-    primary: '#96CDB0',      // brand-mint — primary CTA
-    primaryInk: '#081B1B',
-    primarySoft: '#dcf2e6',  // mint-100
-    // My bubble: mint background (light), forest text
-    mine: '#96CDB0',
-    mineInk: '#081B1B',
+    bg: '#F2F5F8',           // cool light grey-blue app surface
+    surface: '#FFFFFF',      // cards
+    ink: '#002854',          // deep navy — primary text
+    ink2: '#3A5A78',         // muted navy secondary
+    ink3: '#8A9AAB',         // blue-grey meta
+    divider: '#DDE4EA',      // light blue-grey
+    primary: '#006898',      // mid blue — primary CTA
+    primaryInk: '#FFFFFF',
+    primarySoft: '#D6EAF3',  // pale blue
+    // My bubble: cyan, dark navy text
+    mine: '#05A9CF',
+    mineInk: '#002854',
     // Their bubble: pure white
     them: '#FFFFFF',
-    themInk: '#081B1B',
-    themBorder: '#dde4e1',
-    themAvatar: '#203B37',
-    themAvatarBg: '#dcf2e6',
-    // AI uses COPPER (no purple per brand rules)
-    ai: '#C18D52',           // brand-copper
+    themInk: '#002854',
+    themBorder: '#DDE4EA',
+    themAvatar: '#3A5A78',
+    themAvatarBg: '#E5EBF1',
+    // AI uses DEEP NAVY (distinct from cyan "me" and white "them")
+    ai: '#002854',
     aiInk: '#FFFFFF',
-    aiSoft: '#f7f1cc',       // cream-100
-    aiDeep: '#735233',       // cream-800
-    accent2: '#5A8F76',      // brand-sage — success/secondary
+    aiSoft: '#E3EAF1',
+    aiDeep: '#001B3C',
+    accent2: '#05A9CF',      // bright cyan — success/secondary accent
   },
   dark: {
-    bg: '#081B1B',           // brand-ink
-    surface: '#102220',      // forest-800
-    ink: '#f7f1cc',          // cream-100
-    ink2: '#EEE8B2',         // cream-300
-    ink3: '#6e8e88',         // forest-300
+    bg: '#001226',           // near-black navy
+    surface: '#04203F',      // deep navy card
+    ink: '#EAF1F7',
+    ink2: '#A8C0D4',
+    ink3: '#5E7A95',
     divider: 'rgba(255,255,255,0.10)',
-    primary: '#96CDB0',
-    primaryInk: '#081B1B',
-    primarySoft: '#182d2a',  // forest-700 ish
-    mine: '#96CDB0',
-    mineInk: '#081B1B',
-    them: '#102220',
-    themInk: '#f7f1cc',
+    primary: '#05A9CF',
+    primaryInk: '#002854',
+    primarySoft: '#0A2E50',
+    mine: '#05A9CF',
+    mineInk: '#002854',
+    them: '#04203F',
+    themInk: '#EAF1F7',
     themBorder: 'rgba(255,255,255,0.12)',
-    themAvatar: '#96CDB0',
-    themAvatarBg: '#182d2a',
-    ai: '#d4b06f',           // cream-500 (brighter copper for dark)
-    aiInk: '#081B1B',
-    aiSoft: '#4a3522',       // cream-900
-    aiDeep: '#EEE8B2',
-    accent2: '#96CDB0',
+    themAvatar: '#A8C0D4',
+    themAvatarBg: '#0A2E50',
+    ai: '#0E4C7A',
+    aiInk: '#FFFFFF',
+    aiSoft: '#0A2E50',
+    aiDeep: '#002854',
+    accent2: '#05A9CF',
   },
 };
 

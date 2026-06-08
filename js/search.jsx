@@ -27,7 +27,7 @@ function SearchOverlay({ palette, dark, onClose, embedded = false, onJump, initi
   }, [q, filter]);
 
   const totalHits = grouped.reduce((n, g) => n + g.hits.length, 0);
-  const recent = window.CT_HISTORY.slice(0, 5);
+  const recent = [...((window.CT_SAVED && window.CT_SAVED.all()) || []), ...window.CT_HISTORY].slice(0, 6);
 
   return (
     <div style={{

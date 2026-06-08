@@ -5,8 +5,8 @@ const PROD_TWEAK_DEFAULTS = /*EDITMODE-BEGIN*/{
   "suggStyle": "carousel",
   "maxSugg": 3,
   "theme": "light",
-  "primary": "#96CDB0",
-  "primaryInk": "#081B1B",
+  "primary": "#006898",
+  "primaryInk": "#FFFFFF",
   "fontSize": 14,
   "bubbleRadius": 22,
   "bubbleShadow": "soft",
@@ -22,8 +22,8 @@ function ProductionApp() {
   // Lock body background to the active theme so mobile address bar / overscroll
   // doesn't show a different color.
   React.useEffect(() => {
-    document.body.style.background = dark ? '#081B1B' : '#FCF9E8';
-    document.documentElement.style.background = dark ? '#081B1B' : '#FCF9E8';
+    document.body.style.background = dark ? '#001226' : '#F2F5F8';
+    document.documentElement.style.background = dark ? '#001226' : '#F2F5F8';
   }, [dark]);
 
   return (
@@ -31,7 +31,7 @@ function ProductionApp() {
       <div style={{
         position: 'fixed', inset: 0,
         display: 'flex', flexDirection: 'column',
-        background: dark ? '#081B1B' : '#FCF9E8',
+        background: dark ? '#001226' : '#F2F5F8',
         fontFamily: "'Plus Jakarta Sans', -apple-system, system-ui, sans-serif",
       }}>
         <LiveTranslator tweaks={tweaks} setTweak={setTweak} />
@@ -73,7 +73,7 @@ function ProductionApp() {
           <window.TweakColor
             label="메인 컬러"
             value={tweaks.primary}
-            options={['#96CDB0', '#5A8F76', '#203B37', '#C18D52', '#735233', '#EEE8B2']}
+            options={['#006898', '#05A9CF', '#002854', '#0E7AAE', '#3A5A78', '#A6A6A6']}
             onChange={v => setTweak('primary', v)}
           />
           <window.TweakSlider
