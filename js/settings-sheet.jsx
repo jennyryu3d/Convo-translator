@@ -1,8 +1,9 @@
 // App version + settings sheet (bottom-sheet) showing version info.
 window.CT_VERSION = {
-  number: '1.0.0',
-  build: '2026.06.08',
+  number: '1.1.0',
+  build: '2026.06.09',
   label: 'Beta',
+  notes: '실시간 통역/혼자 연습 모드 분리 · 모바일 마이크 권한 개선 · 대화 저장',
 };
 
 function SettingsSheet({ palette, dark, onClose, target, native }) {
@@ -58,6 +59,15 @@ function SettingsSheet({ palette, dark, onClose, target, native }) {
           <Row c={c} label="내 모국어" value={`${nat.name} (${nat.code})`} />
           <Row c={c} label="음성 인식" value={sttOK ? '지원됨' : '미지원 브라우저'} ok={sttOK} />
           <Row c={c} label="API 연결" value={window.CT_API.needsKey() ? (window.CT_API.getKey() ? '연결됨 (내 키)' : '키 필요') : '디자인 환경'} ok={!window.CT_API.needsKey() || !!window.CT_API.getKey()} last />
+        </div>
+
+        <div style={{ padding: '12px 18px 0' }}>
+          <div style={{
+            background: c.bg, borderRadius: 12, padding: '10px 12px',
+            fontSize: 11, color: c.ink2, lineHeight: 1.5,
+          }}>
+            <b style={{ color: c.primary }}>이번 업데이트</b><br/>{v.notes}
+          </div>
         </div>
 
         <div style={{ padding: '14px 20px 0', textAlign: 'center', fontSize: 11, color: c.ink3, lineHeight: 1.5 }}>

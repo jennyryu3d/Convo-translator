@@ -13,15 +13,20 @@ function LiveTranslator({ tweaks, setTweak }) {
     return p;
   }, [palette, tweaks.primary, tweaks.primaryInk]);
 
-  const [convo, setConvo] = React.useState(window.CT_CONVO);
-  const [mode, setMode] = React.useState('mine');
-  const [voiceModeOpen, setVoiceModeOpen] = React.useState(false);
+  const [convo, setConvo] = React.useState([]);
+  const [appMode, setAppMode] = React.useState('practice'); // 'practice' | 'live'
   const [searchOpen, setSearchOpen] = React.useState(false);
   const [langPicker, setLangPicker] = React.useState(null);  // 'target' | 'native' | null
   const [settingsOpen, setSettingsOpen] = React.useState(false);
   const [saveOpen, setSaveOpen] = React.useState(false);
+  const [saveAuto, setSaveAuto] = React.useState(false); // did the save sheet auto-open?
   const promptedRef = React.useRef(false);   // only auto-prompt once per conversation
   const idleRef = React.useRef(null);
+
+  // Auto-popup suppressed for the rest of today?
+  function autoPromptSnoozed() {
+    try { return localStorage.getItem('ct_save_prompt_off') === new Date().toDateString(); } catch (e) { return false; }
+  }
   const target = tweaks.target || 'EN';
   const native = tweaks.native || 'KO';
   const scrollRef = window.useDragScroll();
@@ -37,10 +42,11 @@ function LiveTranslator({ tweaks, setTweak }) {
     if (idleRef.current) clearTimeout(idleRef.current);
     const realMessages = convo.length;
     const enough = realMessages >= 4;        // a real exchange happened
-    if (!enough || promptedRef.current || saveOpen) return;
+    if (!enough || promptedRef.current || saveOpen || autoPromptSnoozed()) return;
     idleRef.current = setTimeout(() => {
-      if (!promptedRef.current && !saveOpen) {
+      if (!promptedRef.current && !saveOpen && !autoPromptSnoozed()) {
         promptedRef.current = true;
+        setSaveAuto(true);
         setSaveOpen(true);
       }
     }, 45000); // 45s of no new messages → likely conversation ended
@@ -59,16 +65,16 @@ function LiveTranslator({ tweaks, setTweak }) {
     return (h < 12 ? '오전 ' : '오후 ') + ((h % 12) || 12) + ':' + m;
   }
 
-  // Send MY message: orig=raw input, trans=TARGET sent. Then generate a
-  // realistic, context-aware reply from the other person + 3 follow-up suggestions.
-  function sendMine(orig, trans, inputKind = 'ko') {
+  // Send MY message. In practice mode the AI replies; in live mode (opts.noReply)
+  // a real person will reply, so we just record my turn.
+  function sendMine(orig, trans, inputKind = 'foreign', opts = {}) {
     const myMsg = { id: Date.now(), side: 'me', orig, trans, inputKind, time: nowStamp() };
     setConvo(cv => [...cv, myMsg]);
+    if (opts.noReply) return;
 
     (async () => {
       const targetName = window.CT_LANG.byCode(target).native;
       const nativeName = window.CT_LANG.byCode(native).native;
-      // Build a short transcript for context.
       const recent = [...convo, myMsg].slice(-6).map(m =>
         (m.side === 'me' ? 'A' : 'B') + ': ' + (m.trans || m.orig)
       ).join('\n');
@@ -76,8 +82,9 @@ function LiveTranslator({ tweaks, setTweak }) {
         const res = await window.CT_API.complete(
           `You are simulating a natural conversation partner "B" replying to "A" in ${targetName}. ` +
           `Reply realistically and specifically to A's last message, continuing the conversation naturally (1-2 sentences). ` +
-          `Then propose 3 short follow-up replies A could send next, each responding to YOUR reply, with a one-word Korean intent tag.\n` +
-          `Return strict JSON on one line: {"reply":"<${targetName}>","reply_native":"<${nativeName} translation of reply>","suggestions":[{"en":"<${targetName} follow-up>","ko":"<${nativeName}>","tone":"<intent>"},{...},{...}]}\n\n` +
+          `Then propose 3 short follow-up replies A could send next, each responding to YOUR reply.\n` +
+          `Return strict JSON on one line. "ko" MUST be a full natural ${nativeName} translation of the "en" sentence (NOT a category or keyword):\n` +
+          `{"reply":"<${targetName}>","reply_native":"<full ${nativeName} translation of reply>","suggestions":[{"en":"<${targetName} follow-up>","ko":"<full ${nativeName} translation>"},{"en":"...","ko":"..."},{"en":"...","ko":"..."}]}\n\n` +
           `Conversation so far:\n${recent}`
         );
         const raw = String(res).trim().replace(/^```json\s*/i,'').replace(/```\s*$/,'');
@@ -88,35 +95,53 @@ function LiveTranslator({ tweaks, setTweak }) {
           suggestions: (p.suggestions || []).slice(0, 3),
         }]);
       } catch (e) {
-        // Fallback to a generic canned reply if API unavailable.
-        const replies = [
-          { en: 'Got it. Could you send over the updated draft by Friday?', ko: '알겠습니다. 금요일까지 수정된 초안을 보내주실 수 있을까요?' },
-          { en: 'Thanks for clarifying. What\'s the next step on your end?', ko: '명확히 해주셔서 감사해요. 그쪽에서는 다음 단계가 뭔가요?' },
-        ];
-        const pick = replies[Math.floor(Math.random() * replies.length)];
+        const pick = { en: 'Got it. Could you tell me more?', ko: '알겠어요. 좀 더 말씀해 주실래요?' };
         setConvo(cv => [...cv, {
           id: Date.now() + 1, side: 'them', orig: pick.en, trans: pick.ko, time: nowStamp(),
           suggestions: [
-            { en: 'Sure, I\'ll have it ready by Thursday.', ko: '네, 목요일까지 준비할게요.', tone: '동의' },
-            { en: 'Can we aim for Monday instead?', ko: '월요일은 어떠세요?', tone: '대안' },
-            { en: 'Anything specific I should highlight?', ko: '특별히 강조할 부분이 있을까요?', tone: '질문' },
+            { en: 'Sure, let me explain.', ko: '네, 설명할게요.', tone: '설명' },
+            { en: 'Can we talk about it later?', ko: '나중에 얘기해도 될까요?', tone: '보류' },
+            { en: 'What do you think?', ko: '어떻게 생각하세요?', tone: '질문' },
           ],
         }]);
       }
     })();
   }
 
-  // Record THEIR speech: orig=English (their words), trans=Korean (for me to read)
-  function sendThem(english, korean) {
-    setConvo(cv => [...cv, {
-      id: Date.now(), side: 'them',
-      orig: english, trans: korean, time: nowStamp(),
-      suggestions: [
-        { en: 'Got it, thanks for letting me know.', ko: '알겠습니다, 알려주셔서 감사해요.', tone: '동의' },
-        { en: 'Could you give me a bit more detail on that?', ko: '그 부분 조금 더 자세히 설명해 주실 수 있나요?', tone: '질문' },
-        { en: 'Let me get back to you after I check internally.', ko: '내부 확인 후 다시 말씀드릴게요.', tone: '보류' },
-      ],
-    }]);
+  // Record what the OTHER person said (live mode). orig=target text they spoke,
+  // trans=native translation for me. Then generate 3 contextual follow-up
+  // suggestions I could say next — shown immediately under their bubble.
+  function sendThem(targetText, nativeText) {
+    const themId = Date.now();
+    const themMsg = { id: themId, side: 'them', orig: targetText, trans: nativeText, time: nowStamp(), suggestions: null };
+    setConvo(cv => [...cv, themMsg]);
+
+    (async () => {
+      const targetName = window.CT_LANG.byCode(target).native;
+      const nativeName = window.CT_LANG.byCode(native).native;
+      const recent = [...convo, themMsg].slice(-6).map(m =>
+        (m.side === 'me' ? 'Me' : 'Them') + ': ' + (m.orig)
+      ).join('\n');
+      try {
+        const res = await window.CT_API.complete(
+          `In a live conversation, the other person just said something in ${targetName}. ` +
+          `Propose 3 short, natural replies I could say next in ${targetName}, each directly responding to what they said.\n` +
+          `Return strict JSON on one line. "ko" MUST be a full natural ${nativeName} translation of the "en" sentence (NOT a category or keyword):\n` +
+          `{"suggestions":[{"en":"<${targetName}>","ko":"<full ${nativeName} translation>"},{"en":"...","ko":"..."},{"en":"...","ko":"..."}]}\n\n` +
+          `Conversation so far:\n${recent}\n\nTheir last words: ${targetText}`
+        );
+        const raw = String(res).trim().replace(/^```json\s*/i,'').replace(/```\s*$/,'');
+        const p = JSON.parse(raw);
+        const sugg = (p.suggestions || []).slice(0, 3);
+        setConvo(cv => cv.map(m => m.id === themId ? { ...m, suggestions: sugg } : m));
+      } catch (e) {
+        setConvo(cv => cv.map(m => m.id === themId ? { ...m, suggestions: [
+          { en: 'Got it, thanks.', ko: '알겠어요, 감사해요.', tone: '동의' },
+          { en: 'Could you say that again?', ko: '다시 말씀해 주실래요?', tone: '요청' },
+          { en: 'Let me think about it.', ko: '생각해 볼게요.', tone: '보류' },
+        ] } : m));
+      }
+    })();
   }
 
   // Apply dynamic font-size & bubble radius via inline style props
@@ -138,17 +163,40 @@ function LiveTranslator({ tweaks, setTweak }) {
         onSearch={() => setSearchOpen(true)}
         onHistory={() => setSearchOpen(true)}
         onSettings={() => setSettingsOpen(true)}
-        onSaveConvo={() => { if (convo.length) setSaveOpen(true); }}
+        onSaveConvo={() => { if (convo.length) { setSaveAuto(false); setSaveOpen(true); } }}
         target={target} native={native}
         onPickTarget={() => setLangPicker('target')}
         onPickNative={() => setLangPicker('native')}
       />
 
       <div ref={scrollRef} style={{
-        flex: 1, minHeight: 0, overflowY: 'auto',
+        flex: 1, minHeight: 0, overflowY: 'auto', position: 'relative',
         padding: '12px 14px 6px',
         scrollBehavior: 'smooth',
       }}>
+        {convo.length === 0 && (
+          <div style={{
+            position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column',
+            alignItems: 'center', justifyContent: 'center', gap: 14, padding: '0 40px',
+            pointerEvents: 'none', textAlign: 'center',
+          }}>
+            <div style={{
+              width: 64, height: 64, borderRadius: 20,
+              background: c.primarySoft, color: c.primary,
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+            }}>
+              <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8z"/></svg>
+            </div>
+            <div style={{
+              fontSize: 19, fontWeight: 800, color: c.ink,
+              fontFamily: "'Chakra Petch', system-ui, sans-serif",
+            }}>대화를 시작해 보세요</div>
+            <div style={{ fontSize: 13, color: c.ink2, lineHeight: 1.6 }}>
+              아래에서 <b style={{ color: c.ai }}>실시간 대화</b> 또는 <b style={{ color: c.primary }}>학습 모드</b>를 골라<br/>
+              말하거나 입력하면 번역과 다음 표현 제안이 시작돼요
+            </div>
+          </div>
+        )}
         {convo.map((m, i) => {
           if (m.side === 'me') {
             return <MyBubbleStyled key={m.id} msg={m} palette={c} radius={bubbleRadius} shadow={shadowStr} fontScale={fontScale} />;
@@ -163,7 +211,7 @@ function LiveTranslator({ tweaks, setTweak }) {
                   suggestions={m.suggestions}
                   dark={dark}
                   max={tweaks.maxSugg}
-                  onPick={s => sendMine(s.ko, s.en, 'picked')}
+                  onPick={s => sendMine(s.ko, s.en, 'picked', { noReply: appMode === 'live' })}
                 />
               )}
             </TheirBubbleStyled>
@@ -171,24 +219,10 @@ function LiveTranslator({ tweaks, setTweak }) {
         })}
       </div>
 
-      <LiveInput palette={c} dark={dark} mode={mode} onModeChange={setMode}
-        onSendMine={sendMine} onSendThem={sendThem} fontScale={fontScale}
-        onOpenVoice={() => setVoiceModeOpen(true)}
+      <LiveInput palette={c} dark={dark} fontScale={fontScale}
+        appMode={appMode} onModeChange={setAppMode}
+        onSendMine={sendMine} onSendThem={sendThem}
         target={target} native={native} />
-
-      {voiceModeOpen && (
-        <window.VoiceMode
-          palette={c}
-          dark={dark}
-          target={target}
-          native={native}
-          onClose={() => setVoiceModeOpen(false)}
-          onLog={(entry) => {
-            const stamp = nowStamp();
-            setConvo(cv => [...cv, { id: Date.now() + Math.random(), ...entry, time: stamp }]);
-          }}
-        />
-      )}
 
       {searchOpen && (
         <window.SearchOverlay
@@ -221,9 +255,14 @@ function LiveTranslator({ tweaks, setTweak }) {
         <window.SaveConvoSheet
           palette={c} dark={dark}
           convo={convo} target={target} native={native}
-          onSaved={() => { setSaveOpen(false); startNewConversation(); }}
-          onDelete={() => { setSaveOpen(false); startNewConversation(); }}
-          onDismiss={() => setSaveOpen(false)}
+          autoOpened={saveAuto}
+          onSaved={() => { setSaveOpen(false); setSaveAuto(false); startNewConversation(); }}
+          onDelete={() => { setSaveOpen(false); setSaveAuto(false); startNewConversation(); }}
+          onDismiss={() => { setSaveOpen(false); setSaveAuto(false); }}
+          onSnooze={() => {
+            try { localStorage.setItem('ct_save_prompt_off', new Date().toDateString()); } catch (e) {}
+            setSaveOpen(false); setSaveAuto(false);
+          }}
         />
       )}
     </div>
@@ -366,51 +405,88 @@ function IconModeBtn({ c, active, accent, onClick, title, children }) {
   );
 }
 
-function LiveInput({ palette, dark, mode, onModeChange, onSendMine, onSendThem, fontScale = 1, onOpenVoice, target = 'EN', native = 'KO' }) {
+// Bottom input bar. Two modes selected inline (no page switch):
+// • 학습 모드 (practice): I input → AI replies as the partner + suggests.
+// • 실시간 대화 (live): real person across from me. Two buttons — "내가 말하기"
+//   (my voice → target, no AI reply) and "상대방 말하기" (their voice → native +
+//   3 suggestions). All bubbles stay in the main conversation.
+function LiveInput({ palette, dark, fontScale = 1, appMode = 'practice', onModeChange, onSendMine, onSendThem, target = 'EN', native = 'KO' }) {
   const c = palette;
-  const isMine = mode === 'mine';
   const I = window.CT_ICONS;
   const targetLang = window.CT_LANG.byCode(target);
   const nativeLang = window.CT_LANG.byCode(native);
+  const isLive = appMode === 'live';
 
   const [rawInput, setRawInput] = React.useState('');
   const [preview, setPreview] = React.useState('');
-  const [inputKind, setInputKind] = React.useState('foreign'); // 'foreign' | 'clean' | 'polished'
+  const [inputKind, setInputKind] = React.useState('foreign');
   const [translating, setTranslating] = React.useState(false);
-  const [recording, setRecording] = React.useState(false);
+  const [recSide, setRecSide] = React.useState(null); // null | 'me' | 'them'
+  const [busy, setBusy] = React.useState(false);
   const taRef = React.useRef(null);
   const recRef = React.useRef(null);
 
   React.useEffect(() => () => { if (recRef.current) recRef.current.abort(); }, []);
 
-  // Mic in the chat input: STT in the language I'd naturally speak for this mode.
-  // mine → my native language; them → the target (other person's) language.
-  function toggleMic() {
-    if (recording && recRef.current) { recRef.current.stop(); return; }
-    if (!(window.CT_RECOGNIZE && window.CT_RECOGNIZE.supported())) {
-      alert('이 브라우저는 음성 인식을 지원하지 않아요. Chrome 또는 Safari에서 사용해 주세요.');
-      return;
-    }
-    const locale = isMine ? nativeLang.locale : targetLang.locale;
-    const rec = window.CT_RECOGNIZE.create(locale, {
+  // Translate helper.
+  async function translate(text, fromName, toName) {
+    const res = await window.CT_API.complete(
+      `Translate this ${fromName} to natural ${toName}. Output only the ${toName} translation — no quotes, no explanation.\n\n${fromName}: ${text}`
+    );
+    return String(res).trim().replace(/^["'`]|["'`]$/g, '');
+  }
+
+  // LIVE: a side speaks. me → my native, them → target language.
+  async function liveListen(side) {
+    if (recSide === side && recRef.current) { recRef.current.stop(); return; }
+    if (recSide) return;
+    const locale = side === 'me' ? nativeLang.locale : targetLang.locale;
+    let captured = '';
+    const rec = await window.CT_RECOGNIZE.startWithPermission(locale, {
       continuous: false,
-      onInterim: (t) => setRawInput(t),
-      onFinal:   (t) => setRawInput(t),
-      onError:   (err) => {
-        setRecording(false);
-        if (err === 'not-allowed' || err === 'service-not-allowed') {
-          alert('마이크 권한이 필요해요. 브라우저 설정에서 마이크를 허용해 주세요.');
-        }
+      onInterim: () => {},
+      onFinal: (t) => { captured = t; },
+      onError: () => { setRecSide(null); },
+      onPermission: (status) => { setRecSide(null); alert(window.CT_MIC_HELP(status)); },
+      onEnd: async () => {
+        setRecSide(null); recRef.current = null;
+        const text = (captured || '').trim();
+        if (!text) return;
+        setBusy(true);
+        try {
+          if (side === 'me') {
+            const out = await translate(text, nativeLang.native, targetLang.native);
+            window.CT_SPEAK && window.CT_SPEAK.once(out, targetLang.locale);
+            onSendMine(text, out, 'foreign', { noReply: true });
+          } else {
+            const out = await translate(text, targetLang.native, nativeLang.native);
+            onSendThem(text, out);
+          }
+        } catch (e) {}
+        setBusy(false);
       },
-      onEnd: () => { setRecording(false); recRef.current = null; },
     });
     if (!rec) return;
     recRef.current = rec;
-    setRecording(true);
-    rec.start();
+    setRecSide(side);
   }
 
-  // Auto-resize textarea
+  // PRACTICE mic: my native voice → fills text input.
+  async function practiceMic() {
+    if (recSide === 'me' && recRef.current) { recRef.current.stop(); return; }
+    const rec = await window.CT_RECOGNIZE.startWithPermission(nativeLang.locale, {
+      continuous: false,
+      onInterim: (t) => setRawInput(t),
+      onFinal: (t) => setRawInput(t),
+      onError: () => setRecSide(null),
+      onPermission: (status) => { setRecSide(null); alert(window.CT_MIC_HELP(status)); },
+      onEnd: () => { setRecSide(null); recRef.current = null; },
+    });
+    if (!rec) return;
+    recRef.current = rec;
+    setRecSide('me');
+  }
+
   React.useEffect(() => {
     if (taRef.current) {
       taRef.current.style.height = 'auto';
@@ -418,248 +494,175 @@ function LiveInput({ palette, dark, mode, onModeChange, onSendMine, onSendThem, 
     }
   }, [rawInput]);
 
-  // Debounced live translation / grammar fix.
-  // The app is ALWAYS sending in the TARGET language.
-  // Input detection: if input matches target language pattern, treat as native-target editing
-  // (grammar polish); otherwise translate to target. Claude is fully multilingual so we don't
-  // pre-declare the input language — we just ask Claude to detect.
+  // Practice: debounced translate/polish of my input → target.
   React.useEffect(() => {
+    if (isLive) return;
     const text = rawInput.trim();
     if (!text) { setPreview(''); setTranslating(false); setInputKind('foreign'); return; }
     setTranslating(true);
     const t = setTimeout(async () => {
       try {
-        const targetName = targetLang.native;     // 'English', 'Korean', etc.
-        const nativeName = nativeLang.native;
-        if (!isMine) {
-          // their reply: foreign → native (private translation)
-          const res = await window.CT_API.complete(
-            `Translate this ${targetName} text to natural ${nativeName} (polite, business register). Output only the ${nativeName} translation — no quotes, no explanation.\n\n${targetName}: ${text}`
-          );
-          setPreview(String(res).trim().replace(/^["'`]|["'`]$/g, ''));
-          setInputKind('foreign');
-        } else {
-          // my message: detect — input in target lang vs other lang
-          const res = await window.CT_API.complete(
-            `You are a translation + editing assistant.
+        const targetName = targetLang.native;
+        const res = await window.CT_API.complete(
+          `You are a translation + editing assistant.
 Target conversation language: ${targetName}.
-User input may be in ${targetName} (in which case lightly polish grammar/clarity if needed) OR in any other language (in which case translate to natural professional ${targetName}).
-
-Output a JSON object on a single line: {"kind":"polish"|"translate"|"clean","out":"<final ${targetName}>"}
-- "clean": input was already correct, natural ${targetName} — return identical or near-identical
-- "polish": input was ${targetName} but had errors — return corrected ${targetName}
-- "translate": input was a different language — return ${targetName} translation
-
-Strictly JSON, no markdown, no commentary.
+User input may be in ${targetName} (lightly polish grammar/clarity) OR another language (translate to natural ${targetName}).
+Output one-line JSON: {"kind":"polish"|"translate"|"clean","out":"<final ${targetName}>"}
+Strictly JSON, no markdown.
 
 INPUT: ${text}`
-          );
-          const raw = String(res).trim().replace(/^```json\s*/i, '').replace(/```\s*$/, '');
-          let parsed = null;
-          try { parsed = JSON.parse(raw); } catch (e) {}
-          if (parsed && parsed.out) {
-            setPreview(parsed.out);
-            // map to inputKind: foreign | polished | clean
-            const k = parsed.kind === 'translate' ? 'foreign'
-                    : parsed.kind === 'polish'    ? 'polished'
-                    :                                'clean';
-            setInputKind(k);
-          } else {
-            // fallback — treat as translation
-            setPreview(raw.replace(/^["'`]|["'`]$/g, ''));
-            setInputKind('foreign');
-          }
-        }
-      } catch (e) {
-        setPreview(isMine ? '(번역/검토 준비 중…)' : '(translation pending…)');
-        setInputKind('foreign');
-      } finally {
-        setTranslating(false);
-      }
+        );
+        const raw = String(res).trim().replace(/^```json\s*/i, '').replace(/```\s*$/, '');
+        let parsed = null;
+        try { parsed = JSON.parse(raw); } catch (e) {}
+        if (parsed && parsed.out) {
+          setPreview(parsed.out);
+          setInputKind(parsed.kind === 'translate' ? 'foreign' : parsed.kind === 'polish' ? 'polished' : 'clean');
+        } else { setPreview(raw.replace(/^["'`]|["'`]$/g, '')); setInputKind('foreign'); }
+      } catch (e) { setPreview('(번역 준비 중…)'); setInputKind('foreign'); }
+      finally { setTranslating(false); }
     }, 600);
     return () => clearTimeout(t);
-  }, [rawInput, isMine, target, native]);
+  }, [rawInput, target, isLive]);
 
   function handleSend() {
     if (!rawInput.trim() || !preview) return;
-    if (isMine) onSendMine(rawInput, preview, inputKind);
-    else onSendThem(rawInput, preview);
-    setRawInput('');
-    setPreview('');
-    setInputKind('foreign');
+    onSendMine(rawInput, preview, inputKind);
+    setRawInput(''); setPreview(''); setInputKind('foreign');
   }
 
   return (
-    <div style={{ background: c.surface, borderTop: `1px solid ${c.divider}`, padding: '10px 12px 12px' }}>
+    <div style={{ background: c.surface, borderTop: `1px solid ${c.divider}`, padding: '8px 12px 12px' }}>
       <style>{`@keyframes micPulse { 0%,100% { transform: scale(1); } 50% { transform: scale(1.08); } }`}</style>
-      {/* input-source toggle — clearer labels + one-line explanation */}
+
+      {/* MODE SWITCH — stays on the main conversation screen */}
       <div style={{
-        display: 'flex', gap: 6, marginBottom: 4, alignItems: 'center',
-        background: c.bg, borderRadius: 999, padding: 3,
-        border: `1px solid ${c.divider}`,
+        display: 'flex', gap: 4, marginBottom: 10,
+        background: c.bg, borderRadius: 999, padding: 3, border: `1px solid ${c.divider}`,
       }}>
-        <button onClick={() => onModeChange('mine')} style={{
-          flex: 1, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 5,
-          height: 32, padding: '0 10px', borderRadius: 999, border: 'none', cursor: 'pointer',
-          background: isMine ? c.primary : 'transparent',
-          color: isMine ? c.primaryInk : c.ink2,
-          fontSize: 12, fontWeight: 700, transition: 'all .15s',
+        <button onClick={() => onModeChange('live')} style={{
+          flex: 1, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+          height: 36, borderRadius: 999, border: 'none', cursor: 'pointer',
+          background: isLive ? c.ai : 'transparent',
+          color: isLive ? '#fff' : c.ink2, fontSize: 12.5, fontWeight: 800,
+          transition: 'color .15s',
         }}>
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4z"/></svg>
-          내가 입력
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 12h2l2-6 4 12 3-9 2 5h5"/></svg>
+          실시간 대화
         </button>
-        <button onClick={() => onModeChange('them')} style={{
-          flex: 1, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 5,
-          height: 32, padding: '0 10px', borderRadius: 999, border: 'none', cursor: 'pointer',
-          background: !isMine ? c.accent2 : 'transparent',
-          color: !isMine ? '#FFFFFF' : c.ink2,
-          fontSize: 12, fontWeight: 700, transition: 'all .15s',
+        <button onClick={() => onModeChange('practice')} style={{
+          flex: 1, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+          height: 36, borderRadius: 999, border: 'none', cursor: 'pointer',
+          background: !isLive ? c.primary : 'transparent',
+          color: !isLive ? c.primaryInk : c.ink2, fontSize: 12.5, fontWeight: 800,
+          transition: 'color .15s',
         }}>
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M6 8a6 6 0 0 1 12 0c0 4-3 5-3 8a3 3 0 0 1-6 0 3 3 0 0 1 3-3"/></svg>
-          상대 말 받아쓰기
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4z"/></svg>
+          학습 모드
         </button>
-      </div>
-      <div style={{ fontSize: 10, color: c.ink3, marginBottom: 8, paddingLeft: 4, lineHeight: 1.4 }}>
-        {isMine
-          ? <>내가 입력 → <b style={{ color: c.primary }}>{targetLang.name}</b>로 번역해 상대에게 전송</>
-          : <>상대가 한 말을 입력 → <b style={{ color: c.accent2 }}>{nativeLang.name}</b>로 번역해 나에게 표시</>}
       </div>
 
-      {/* Two-line input: raw (top, in source lang) + translated preview (bottom, what's sent) */}
-      <div style={{
-        background: c.bg,
-        border: `1.5px solid ${isMine ? c.primary + '55' : c.accent2 + '55'}`,
-        borderRadius: 18, padding: '8px 8px 8px 14px',
-      }}>
-        {/* Raw input — what I type */}
-        <div style={{ display: 'flex', alignItems: 'flex-start', gap: 6, padding: '2px 0' }}>
-          <span style={{
-            fontSize: 9, fontWeight: 800, color: c.ink3, letterSpacing: 0.4,
-            textTransform: 'uppercase', marginTop: 6, flexShrink: 0,
-            display: 'inline-flex', alignItems: 'center', gap: 3,
-          }}>
-            {isMine ? (
-              <>
-                <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
-                  <rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/>
-                </svg>
-                내가 입력 (한글·영어 자유)
-              </>
-            ) : '상대 영어'}
-          </span>
-          <textarea
-            ref={taRef}
-            value={rawInput}
-            onChange={e => setRawInput(e.target.value)}
-            onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSend(); } }}
-            rows={1}
-            placeholder={isMine
-              ? `어떤 언어로 입력해도 ${targetLang.name}로 전송돼요…`
-              : `상대가 ${targetLang.name}로 말한 것을 적어주세요…`}
-            style={{
-              flex: 1, border: 'none', outline: 'none', background: 'transparent',
-              fontSize: 14 * fontScale, color: c.ink, fontFamily: 'inherit',
-              padding: '4px 0', resize: 'none', minHeight: 22, lineHeight: 1.4,
-            }}
-          />
+      {isLive ? (
+        /* LIVE: two speak buttons — both add to the main conversation */
+        <div>
+          <div style={{ fontSize: 10, color: c.ink3, marginBottom: 8, textAlign: 'center', lineHeight: 1.4 }}>
+            누가 말하는지 누른 뒤 말하세요 · {busy && <span style={{ color: c.primary, fontWeight: 700 }}>처리 중…</span>}
+          </div>
+          <div style={{ display: 'flex', gap: 8 }}>
+            <button onClick={() => liveListen('me')} disabled={recSide === 'them' || busy} style={{
+              flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4,
+              padding: '12px 8px', borderRadius: 16, border: 'none', cursor: 'pointer',
+              background: recSide === 'me' ? '#b84a3a' : c.primary, color: '#fff',
+              opacity: recSide === 'them' ? 0.4 : 1,
+              animation: recSide === 'me' ? 'micPulse 1.1s infinite' : 'none',
+              boxShadow: `0 3px 10px ${c.primary}44`,
+            }}>
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="9" y="3" width="6" height="12" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg>
+              <span style={{ fontSize: 13, fontWeight: 800 }}>{recSide === 'me' ? '듣는 중 · 탭하면 완료' : '내가 말하기'}</span>
+              <span style={{ fontSize: 9, opacity: 0.85 }}>{nativeLang.name} → {targetLang.name}</span>
+            </button>
+            <button onClick={() => liveListen('them')} disabled={recSide === 'me' || busy} style={{
+              flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4,
+              padding: '12px 8px', borderRadius: 16, border: 'none', cursor: 'pointer',
+              background: recSide === 'them' ? '#b84a3a' : c.accent2, color: '#fff',
+              opacity: recSide === 'me' ? 0.4 : 1,
+              animation: recSide === 'them' ? 'micPulse 1.1s infinite' : 'none',
+              boxShadow: `0 3px 10px ${c.accent2}44`,
+            }}>
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M6 8a6 6 0 0 1 12 0c0 4-3 5-3 8a3 3 0 0 1-6 0 3 3 0 0 1 3-3"/></svg>
+              <span style={{ fontSize: 13, fontWeight: 800 }}>{recSide === 'them' ? '듣는 중 · 탭하면 완료' : '상대방 말하기'}</span>
+              <span style={{ fontSize: 9, opacity: 0.85 }}>{targetLang.name} → 제안 3개</span>
+            </button>
+          </div>
         </div>
-
-        {/* Auto-translated / grammar-fixed preview — what actually gets sent */}
-        {(rawInput.trim() || preview) && (
+      ) : (
+        /* PRACTICE: single input → AI replies as partner */
+        <div>
           <div style={{
-            marginTop: 6, paddingTop: 6,
-            borderTop: `1px dashed ${c.divider}`,
-            display: 'flex', alignItems: 'flex-start', gap: 6,
+            fontSize: 10, color: c.ink3, marginBottom: 6, paddingLeft: 4, lineHeight: 1.4,
           }}>
-            <span style={{
-              fontSize: 9, fontWeight: 800,
-              color: isMine
-                ? (inputKind === 'clean' ? c.accent2 : inputKind === 'polished' ? '#9B59E0' : c.primary)
-                : c.accent2,
-              letterSpacing: 0.4,
-              textTransform: 'uppercase', marginTop: 4, flexShrink: 0,
-              display: 'inline-flex', alignItems: 'center', gap: 3,
-            }}>
-              {isMine ? (
-                inputKind === 'clean' ? <>✓ {targetLang.code} 그대로 전송</>
-                : inputKind === 'polished' ? <>✏ {targetLang.code} 정정 후 전송</>
-                : <>{window.CT_ICONS.send} {targetLang.code}로 자동 번역</>
-              ) : <>{nativeLang.name} 번역 (나만 봄)</>}
-            </span>
-            <div style={{
-              flex: 1, fontSize: 14 * fontScale,
-              color: preview ? c.ink : c.ink3,
-              fontWeight: 500, lineHeight: 1.4, padding: '2px 0',
-              fontStyle: preview ? 'normal' : 'italic',
-            }}>
-              {preview || (translating ? '자동 처리 중…' : '입력하면 자동 번역·정정됩니다')}
-              {translating && preview && (
-                <span style={{ marginLeft: 4, fontSize: 10, color: c.ink3 }}>· 갱신 중</span>
-              )}
+            입력하면 AI가 상대역이 되어 답하고 다음 표현을 제안해요
+          </div>
+          <div style={{
+            background: c.bg, border: `1.5px solid ${c.primary}55`,
+            borderRadius: 18, padding: '8px 8px 8px 14px',
+          }}>
+            <textarea
+              ref={taRef}
+              value={rawInput}
+              onChange={e => setRawInput(e.target.value)}
+              onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSend(); } }}
+              rows={1}
+              placeholder={`어떤 언어로 입력해도 ${targetLang.name}로 전송돼요…`}
+              style={{
+                width: '100%', border: 'none', outline: 'none', background: 'transparent',
+                fontSize: 14 * fontScale, color: c.ink, fontFamily: 'inherit',
+                padding: '4px 0', resize: 'none', minHeight: 22, lineHeight: 1.4,
+              }}
+            />
+            {(rawInput.trim() || preview) && (
+              <div style={{
+                marginTop: 6, paddingTop: 6, borderTop: `1px dashed ${c.divider}`,
+                display: 'flex', alignItems: 'flex-start', gap: 6,
+              }}>
+                <span style={{
+                  fontSize: 9, fontWeight: 800,
+                  color: inputKind === 'clean' ? c.accent2 : inputKind === 'polished' ? '#9B59E0' : c.primary,
+                  letterSpacing: 0.4, textTransform: 'uppercase', marginTop: 4, flexShrink: 0,
+                }}>
+                  {inputKind === 'clean' ? `✓ ${targetLang.code} 그대로` : inputKind === 'polished' ? `✏ ${targetLang.code} 정정` : `→ ${targetLang.code} 번역`}
+                </span>
+                <div style={{
+                  flex: 1, fontSize: 14 * fontScale, color: preview ? c.ink : c.ink3,
+                  fontWeight: 500, lineHeight: 1.4, padding: '2px 0', fontStyle: preview ? 'normal' : 'italic',
+                }}>
+                  {preview || (translating ? '자동 처리 중…' : '입력하면 자동 번역됩니다')}
+                </div>
+              </div>
+            )}
+            <div style={{ marginTop: 8, display: 'flex', alignItems: 'center', gap: 8 }}>
+              <button onClick={practiceMic} style={{
+                width: 38, height: 38, borderRadius: 999, border: 'none',
+                background: recSide === 'me' ? '#b84a3a' : c.primarySoft,
+                color: recSide === 'me' ? '#fff' : c.primary, cursor: 'pointer', flexShrink: 0,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                animation: recSide === 'me' ? 'micPulse 1.1s infinite' : 'none',
+              }} title={`${nativeLang.name} 음성 입력`}>
+                {I.mic}
+              </button>
+              <button onClick={handleSend} disabled={!preview} style={{
+                flex: 1, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 5,
+                height: 38, borderRadius: 999, border: 'none',
+                background: preview ? c.primary : c.divider,
+                color: preview ? c.primaryInk : c.ink3,
+                fontSize: 13, fontWeight: 800, cursor: preview ? 'pointer' : 'default',
+              }}>
+                {targetLang.name}로 보내기 {I.send}
+              </button>
             </div>
           </div>
-        )}
-
-        {/* Action row */}
-        <div style={{
-          marginTop: 6, paddingTop: 6,
-          borderTop: rawInput.trim() ? `1px solid ${c.divider}` : 'none',
-          display: rawInput.trim() ? 'flex' : 'none',
-          alignItems: 'center', justifyContent: 'space-between', gap: 6,
-        }}>
-          <div style={{ fontSize: 10, color: c.ink3 }}>
-            {isMine ? (
-              inputKind === 'polished'
-                ? <>원본은 <b style={{ color: '#9B59E0' }}>나만 보임</b>으로 함께 기록돼요.</>
-                : inputKind === 'clean'
-                ? <>{targetLang.name}가 자연스러워서 <b style={{ color: c.accent2 }}>그대로 전송</b>됩니다.</>
-                : <>상대방은 <b style={{ color: c.primary }}>{targetLang.name}만</b> 받아요. 원문은 나만 봐요.</>
-            ) : (
-              <>상대 말을 기록 · 답변 제안 받기</>
-            )}
-          </div>
-          <button
-            onClick={handleSend}
-            disabled={!preview}
-            style={{
-              display: 'inline-flex', alignItems: 'center', gap: 5,
-              padding: '7px 14px', borderRadius: 999, border: 'none',
-              background: preview ? c.primary : c.divider,
-              color: preview ? c.primaryInk : c.ink3,
-              fontSize: 12, fontWeight: 700, cursor: preview ? 'pointer' : 'default',
-              transition: 'all .12s',
-            }}>
-            {isMine ? `${targetLang.code}로 전송` : '상대 말 기록'} {I.send}
-          </button>
         </div>
-      </div>
-
-      {/* Mic button + Voice Mode entry */}
-      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 10, marginTop: 8 }}>
-        <button onClick={toggleMic} style={{
-          width: 44, height: 44, borderRadius: 999, border: 'none',
-          background: recording ? '#b84a3a' : (isMine ? c.primarySoft : c.bg),
-          color: recording ? '#fff' : (isMine ? c.primary : c.accent2), cursor: 'pointer',
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          boxShadow: '0 2px 6px rgba(0,0,0,0.08)',
-          animation: recording ? 'micPulse 1.1s infinite' : 'none',
-        }} title={recording ? '듣는 중 · 탭하면 멈춤' : (isMine ? `${nativeLang.name} 음성 입력` : `상대 ${targetLang.name} 음성 입력`)}>
-          {I.mic}
-        </button>
-        <button onClick={onOpenVoice} style={{
-          display: 'inline-flex', alignItems: 'center', gap: 6,
-          height: 44, padding: '0 16px', borderRadius: 999, border: 'none',
-          background: `linear-gradient(135deg, ${c.primary}, ${c.ai})`,
-          color: '#fff', cursor: 'pointer',
-          fontSize: 12, fontWeight: 700, letterSpacing: 0.2,
-          boxShadow: `0 4px 12px ${c.primary}44`,
-        }} title="보이스 모드 — 실시간 통역">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M3 12h2l2-6 4 12 3-9 2 5h5"/>
-          </svg>
-          보이스 대화 모드
-        </button>
-      </div>
+      )}
     </div>
   );
 }

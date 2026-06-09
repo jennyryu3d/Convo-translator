@@ -184,8 +184,8 @@ function SuggCardDeck({ palette, suggestions, dark, max = 3, onPick }) {
             letterSpacing: '-0.2px', marginBottom: 8,
           }}>{s.en}</div>
           <div style={{
-            fontSize: 12, color: c.aiInk || '#fff', opacity: 0.85, lineHeight: 1.4,
-            paddingTop: 8, borderTop: `1px dashed ${c.aiInk ? c.aiInk + '44' : 'rgba(255,255,255,0.3)'}`,
+            fontSize: 13, color: c.aiInk || '#fff', opacity: 0.95, lineHeight: 1.45,
+            paddingTop: 8, borderTop: `1px dashed ${c.aiInk ? c.aiInk + '55' : 'rgba(255,255,255,0.35)'}`,
           }}>
             {s.ko}
           </div>
@@ -439,7 +439,7 @@ function SuggestionDisplay({ variant, palette, suggestions, dark, max = 3, onPic
     sticky: SuggTileGrid,
     tabbed: SuggBranchPaths,
   };
-  const Cmp = map[variant] || SuggNumberedStack;
+  const Cmp = map[variant] || SuggCardDeck;
   return <Cmp palette={palette} suggestions={suggestions} dark={dark} max={max} onPick={onPick} />;
 }
 

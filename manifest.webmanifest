@@ -1,0 +1,15 @@
+{
+  "name": "ConvoTrans — 대화를 잇는 번역기",
+  "short_name": "ConvoTrans",
+  "description": "실시간 대화 번역 + 다음 표현 제안",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#F2F5F8",
+  "theme_color": "#002854",
+  "icons": [
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+  ]
+}

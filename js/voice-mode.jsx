@@ -68,7 +68,7 @@ function VoiceMode({ palette, dark, onClose, onLog, target = 'EN', native = 'KO'
   }
 
   // Start/stop real speech recognition for a side.
-  function toggleListening(side) {
+  async function toggleListening(side) {
     // If already listening on this side → stop.
     if (active === side && recRef.current) {
       recRef.current.stop();
@@ -76,27 +76,18 @@ function VoiceMode({ palette, dark, onClose, onLog, target = 'EN', native = 'KO'
     }
     if (active) return; // other side busy
 
-    if (!sttSupported) {
-      // Graceful fallback: no STT engine. Inform the user.
-      alert('이 브라우저는 음성 인식을 지원하지 않아요. Chrome 또는 Safari에서 사용해 주세요. (텍스트 입력은 채팅 화면에서 가능합니다)');
-      return;
-    }
-
     // Reset this side's text.
     if (side === 'me') { setMyInterim(''); setMyFinal(''); setMyTrans(''); }
     else { setThemInterim(''); setThemFinal(''); setThemTrans(''); }
 
     const locale = side === 'me' ? nativeLang.locale : targetLang.locale;
-    const rec = window.CT_RECOGNIZE.create(locale, {
+    setActive(side);
+    const rec = await window.CT_RECOGNIZE.startWithPermission(locale, {
       continuous: recordMode === 'hands-free',
       onInterim: (t) => { side === 'me' ? setMyInterim(t) : setThemInterim(t); },
       onFinal:   (t) => { side === 'me' ? setMyFinal(t) : setThemFinal(t); },
-      onError:   (err) => {
-        setActive(null);
-        if (err === 'not-allowed' || err === 'service-not-allowed') {
-          alert('마이크 권한이 필요해요. 브라우저 설정에서 마이크를 허용해 주세요.');
-        }
-      },
+      onError:   () => { setActive(null); },
+      onPermission: (status) => { setActive(null); alert(window.CT_MIC_HELP(status)); },
       onEnd: (finalText) => {
         if (side === 'me') setMyInterim('');
         else setThemInterim('');
@@ -104,10 +95,8 @@ function VoiceMode({ palette, dark, onClose, onLog, target = 'EN', native = 'KO'
         recRef.current = null;
       },
     });
-    if (!rec) return;
+    if (!rec) { setActive(null); return; }
     recRef.current = rec;
-    setActive(side);
-    rec.start();
   }
 
   return (

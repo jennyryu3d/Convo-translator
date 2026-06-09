@@ -28,7 +28,7 @@ function todayLabel() {
   return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
 }
 
-function SaveConvoSheet({ palette, dark, convo, target, native, onSaved, onDelete, onDismiss }) {
+function SaveConvoSheet({ palette, dark, convo, target, native, onSaved, onDelete, onDismiss, onSnooze, autoOpened }) {
   const c = palette;
   const nativeLang = window.CT_LANG.byCode(native);
   const [title, setTitle] = React.useState('');
@@ -160,7 +160,7 @@ function SaveConvoSheet({ palette, dark, convo, target, native, onSaved, onDelet
         </div>
 
         {/* Actions */}
-        <div style={{ display: 'flex', gap: 8, marginTop: 16 }}>
+        <div style={{ display: 'flex', gap: 8, marginTop: 16, alignItems: 'center' }}>
           <button onClick={onDelete} style={{
             padding: '12px 14px', borderRadius: 999, border: 'none', cursor: 'pointer',
             background: 'transparent', color: '#C0392B', fontSize: 13, fontWeight: 700,
@@ -180,6 +180,16 @@ function SaveConvoSheet({ palette, dark, convo, target, native, onSaved, onDelet
             boxShadow: `0 4px 12px ${c.primary}55`,
           }}>저장</button>
         </div>
+
+        {/* Snooze auto-popup for today — only relevant when it auto-opened */}
+        {autoOpened && (
+          <div style={{ textAlign: 'center', marginTop: 10 }}>
+            <button onClick={onSnooze} style={{
+              background: 'transparent', border: 'none', cursor: 'pointer',
+              fontSize: 11, color: c.ink3, fontWeight: 600, textDecoration: 'underline',
+            }}>오늘 하루 자동으로 띄우지 않기</button>
+          </div>
+        )}
       </div>
     </div>
   );

@@ -27,60 +27,79 @@ function TopBar({ palette, dark, onToggleDark, showMascot = true, onSearch, onSe
   const nat = window.CT_LANG.byCode(native);
   return (
     <div style={{
-      padding: '10px 16px 14px',
-      background: c.surface,
-      borderBottom: `1px solid ${c.divider}`,
-      boxShadow: '0 4px 16px rgba(0,40,84,0.10)',
+      padding: '12px 16px 22px',
+      background: `
+        linear-gradient(180deg,
+          #6E7884 0%, #AEB8C2 8%, #E9EEF2 24%, #FCFDFE 46%,
+          #D2DAE1 60%, #AAB4BE 76%, #C8D0D8 86%, #F4F7F9 93%, #9AA4AE 97%, #5E6772 100%),
+        repeating-linear-gradient(90deg,
+          rgba(255,255,255,0.45) 0px, rgba(255,255,255,0) 1.5px,
+          rgba(70,80,92,0.14) 2.5px, rgba(255,255,255,0.28) 4px)
+      `,
+      borderRadius: '0 0 16px 16px',
+      // Polished cut-metal edge: crisp bright highlight then deep shadow at the bottom
+      boxShadow: `
+        0 12px 18px -7px rgba(0,12,28,0.55),
+        0 5px 8px rgba(0,12,28,0.38),
+        inset 0 2px 1px rgba(255,255,255,0.95),
+        inset 2px 0 1px rgba(255,255,255,0.55),
+        inset -2px 0 1px rgba(0,16,32,0.30),
+        inset 0 -7px 7px -4px rgba(0,16,32,0.45),
+        inset 0 -3px 0 rgba(255,255,255,0.85),
+        inset 0 -4px 1px rgba(0,16,32,0.75)
+      `,
+      borderTop: '1px solid rgba(255,255,255,0.9)',
+      borderLeft: '1px solid rgba(255,255,255,0.5)',
+      borderRight: '1px solid rgba(0,16,32,0.35)',
+      borderBottom: '2px solid rgba(0,16,32,0.7)',
       position: 'relative', zIndex: 5,
-      display: 'flex', flexDirection: 'column', gap: 10,
+      display: 'flex', flexDirection: 'column', gap: 12,
     }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <img src="convotrans-design/assets/app-icon.png?v=17" alt="ConvoTrans"
-            style={{ width: 34, height: 34, borderRadius: 9, flexShrink: 0, boxShadow: '0 1px 3px rgba(8,27,27,0.18)' }} />
+        <div style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
+          <img src="convotrans-design/assets/app-icon.png?v=34" alt="ConvoTrans"
+            style={{ width: 36, height: 36, borderRadius: 10, flexShrink: 0, boxShadow: '0 2px 6px rgba(0,40,84,0.25)' }} />
           <div>
             <div style={{
-              fontSize: 17, fontWeight: 700, color: c.ink, letterSpacing: '-0.01em', lineHeight: 1.1,
+              fontSize: 17, fontWeight: 700, color: '#002854', letterSpacing: '-0.01em', lineHeight: 1.1,
               fontFamily: "'Chakra Petch', system-ui, sans-serif",
             }}>
               ConvoTrans
             </div>
-            <div style={{ fontSize: 10, color: c.ink3, letterSpacing: '0.1em', textTransform: 'uppercase', marginTop: 2 }}>
+            <div style={{ fontSize: 10, color: '#5E7A95', letterSpacing: '0.12em', textTransform: 'uppercase', marginTop: 2 }}>
               Live translation
             </div>
           </div>
         </div>
-        <div style={{ display: 'flex', gap: 2 }}>
-          <IconBtn palette={c} onClick={onSearch} ariaLabel="search">
+        <div style={{ display: 'flex', gap: 4 }}>
+          <HeaderIcon onClick={onSearch} ariaLabel="search">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/>
             </svg>
-          </IconBtn>
-          <IconBtn palette={c} onClick={onSaveConvo} ariaLabel="save conversation">
+          </HeaderIcon>
+          <HeaderIcon onClick={onSaveConvo} ariaLabel="save conversation">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>
-          </IconBtn>
-          <IconBtn palette={c} onClick={onToggleDark} ariaLabel="theme">{dark ? window.CT_ICONS.sun : window.CT_ICONS.moon}</IconBtn>
-          <IconBtn palette={c} onClick={onHistory} ariaLabel="history">{window.CT_ICONS.history}</IconBtn>
-          <IconBtn palette={c} onClick={onSettings} ariaLabel="settings">{window.CT_ICONS.settings}</IconBtn>
+          </HeaderIcon>
+          <HeaderIcon onClick={onToggleDark} ariaLabel="theme">{dark ? window.CT_ICONS.sun : window.CT_ICONS.moon}</HeaderIcon>
+          <HeaderIcon onClick={onHistory} ariaLabel="history">{window.CT_ICONS.history}</HeaderIcon>
+          <HeaderIcon onClick={onSettings} ariaLabel="settings">{window.CT_ICONS.settings}</HeaderIcon>
         </div>
       </div>
 
-      {/* Two language slots — target (what gets sent) + native (private helper) */}
+      {/* Two language slots — other person's language + my language */}
       <div style={{ display: 'flex', gap: 8 }}>
         <LangSlot
           c={c}
           role="target"
           lang={tgt}
-          label="대화 언어"
-          sub="상대에게 전송 · 교정"
+          label="상대방 언어"
           onClick={() => onPickTarget?.()}
         />
         <LangSlot
           c={c}
           role="native"
           lang={nat}
-          label="내 모국어"
-          sub="나만 보는 보조"
+          label="내 언어"
           onClick={() => onPickNative?.()}
         />
       </div>
@@ -89,23 +108,22 @@ function TopBar({ palette, dark, onToggleDark, showMascot = true, onSearch, onSe
 }
 
 function LangSlot({ c, role, lang, label, sub, onClick }) {
-  const isTarget = role === 'target';
-  const tint = isTarget ? c.primary : c.accent2;
   return (
     <button onClick={onClick} style={{
-      flex: 1, display: 'flex', alignItems: 'center', gap: 9,
-      background: '#3A5A78',
-      borderRadius: 14, padding: '8px 10px 8px 8px',
-      border: `1.5px solid ${isTarget ? tint : '#2C4660'}`,
+      flex: 1, display: 'flex', alignItems: 'center', gap: 10,
+      background: 'linear-gradient(180deg, #1E4D74 0%, #143A5C 100%)',
+      borderRadius: 14, padding: '9px 12px 9px 10px',
+      border: `1px solid #0E2F4D`,
+      boxShadow: '0 2px 6px rgba(0,40,84,0.25)',
       cursor: 'pointer', textAlign: 'left',
       transition: 'all 140ms cubic-bezier(0.22, 0.61, 0.36, 1)',
       fontFamily: 'inherit',
     }}>
-      <window.LangChip code={lang.code} size={36} />
+      <window.LangChip code={lang.code} size={34} />
       <div style={{ flex: 1, minWidth: 0 }}>
         <div style={{
-          fontSize: 10, fontWeight: 600, color: isTarget ? '#9FD8FF' : '#7FE6EE', letterSpacing: '0.12em',
-          textTransform: 'uppercase', lineHeight: 1.1, marginBottom: 2,
+          fontSize: 10, fontWeight: 600, color: 'rgba(255,255,255,0.6)', letterSpacing: '0.1em',
+          textTransform: 'uppercase', lineHeight: 1.1, marginBottom: 3,
           fontFamily: "'Chakra Petch', system-ui, sans-serif",
         }}>{label}</div>
         <div style={{
@@ -114,12 +132,9 @@ function LangSlot({ c, role, lang, label, sub, onClick }) {
           whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
         }}>
           {lang.name}
-          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.7)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, marginLeft: 2 }}>
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.6)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, marginLeft: 2 }}>
             <polyline points="6 9 12 15 18 9"/>
           </svg>
-        </div>
-        <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.6)', marginTop: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-          {sub}
         </div>
       </div>
     </button>
@@ -161,6 +176,27 @@ function IconBtn({ palette, children, onClick, active, ariaLabel }) {
         display: 'flex', alignItems: 'center', justifyContent: 'center',
         transition: 'all .12s',
       }}>
+      {children}
+    </button>
+  );
+}
+
+// Header action icon — pale navy chip so the action set harmonizes with the logo.
+function HeaderIcon({ children, onClick, ariaLabel }) {
+  return (
+    <button
+      aria-label={ariaLabel}
+      onClick={onClick}
+      style={{
+        width: 34, height: 34, borderRadius: 10, border: 'none', cursor: 'pointer',
+        background: 'rgba(0,40,84,0.06)',
+        color: '#13395E',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        transition: 'all .12s',
+      }}
+      onMouseEnter={e => { e.currentTarget.style.background = 'rgba(0,40,84,0.12)'; }}
+      onMouseLeave={e => { e.currentTarget.style.background = 'rgba(0,40,84,0.06)'; }}
+    >
       {children}
     </button>
   );
@@ -450,4 +486,4 @@ function PhoneShell({ palette, dark, children, width = 390, height = 800 }) {
   );
 }
 
-Object.assign(window, { TopBar, MyBubble, TheirBubble, SmallBtn, InputBar, SpeakerTab, SectionLabel, PhoneShell, IconBtn, LangSlot });
+Object.assign(window, { TopBar, MyBubble, TheirBubble, SmallBtn, InputBar, SpeakerTab, SectionLabel, PhoneShell, IconBtn, HeaderIcon, LangSlot });

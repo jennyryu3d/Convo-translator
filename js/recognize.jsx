@@ -1,20 +1,39 @@
 // Real speech recognition (STT) via the browser's Web Speech API.
-// Works in Chrome / Edge / Safari (webkitSpeechRecognition). Streams interim
-// results as you speak, returns a final transcript on stop.
+// Works in Chrome / Edge / Safari (webkitSpeechRecognition).
 //
-// Usage:
-//   const rec = window.CT_RECOGNIZE.create('ko-KR', {
-//     onInterim: (text) => ...,   // live partial text
-//     onFinal:   (text) => ...,   // final transcript when a phrase completes
-//     onEnd:     () => ...,       // recognition stopped
-//     onError:   (err) => ...,
-//     continuous: true,           // keep listening (hands-free) vs one phrase
-//   });
-//   rec.start();  rec.stop();
+// Mobile robustness:
+// • primeMic() requests getUserMedia FIRST (on a user gesture) so the mic
+//   permission is granted cleanly and persistently before SpeechRecognition
+//   starts — this avoids the Android "can't ask for permission" loop.
+// • auto-restart on transient 'no-speech'/'aborted' while still active.
 
 window.CT_RECOGNIZE = {
+  _primed: false,
+
   supported() {
     return !!(window.SpeechRecognition || window.webkitSpeechRecognition);
+  },
+
+  // Ask for mic permission via getUserMedia, then release the stream.
+  // Returns 'ok' | 'denied' | 'overlay' | 'nodevice' | 'unsupported'.
+  async primeMic() {
+    if (this._primed) return 'ok';
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+      return 'unsupported';
+    }
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      // Immediately stop — we only needed the permission grant.
+      stream.getTracks().forEach(t => t.stop());
+      this._primed = true;
+      return 'ok';
+    } catch (e) {
+      const name = (e && e.name) || '';
+      if (name === 'NotAllowedError' || name === 'SecurityError') return 'denied';
+      if (name === 'NotFoundError' || name === 'DevicesNotFoundError') return 'nodevice';
+      if (name === 'NotReadableError' || name === 'AbortError') return 'overlay';
+      return 'denied';
+    }
   },
 
   create(locale, opts = {}) {
@@ -29,8 +48,10 @@ window.CT_RECOGNIZE = {
 
     let finalText = '';
     let stopped = false;
+    let gotResult = false;
 
     rec.onresult = (e) => {
+      gotResult = true;
       let interim = '';
       let freshFinal = '';
       for (let i = e.resultIndex; i < e.results.length; i++) {
@@ -48,12 +69,17 @@ window.CT_RECOGNIZE = {
     };
 
     rec.onerror = (e) => {
-      opts.onError && opts.onError(e.error || 'unknown');
+      const err = (e && e.error) || 'unknown';
+      // 'no-speech' / 'aborted' are transient — let onend decide to restart.
+      if (err === 'no-speech' || err === 'aborted') return;
+      opts.onError && opts.onError(err);
     };
 
     rec.onend = () => {
-      // In continuous hands-free mode, auto-restart unless explicitly stopped.
-      if (opts.continuous && !stopped) {
+      // Only auto-restart in explicit hands-free (continuous) mode. The old
+      // "restart whenever nothing was heard" loop hit Android's rate limit and
+      // killed recognition after a couple turns — so we end cleanly instead.
+      if (!stopped && opts.continuous) {
         try { rec.start(); return; } catch (err) {}
       }
       opts.onEnd && opts.onEnd(finalText);
@@ -61,10 +87,37 @@ window.CT_RECOGNIZE = {
 
     return {
       raw: rec,
-      start() { stopped = false; finalText = ''; try { rec.start(); } catch (e) {} },
+      start() { stopped = false; finalText = ''; gotResult = false; try { rec.start(); } catch (e) {} },
       stop()  { stopped = true; try { rec.stop(); } catch (e) {} },
       abort() { stopped = true; try { rec.abort(); } catch (e) {} },
       getFinal() { return finalText; },
     };
   },
+
+  // High-level helper: prime permission, then start recognition.
+  // Calls opts.onPermission(status) if priming fails so the UI can guide the user.
+  async startWithPermission(locale, opts = {}) {
+    if (!this.supported()) { opts.onPermission && opts.onPermission('unsupported'); return null; }
+    const status = await this.primeMic();
+    if (status !== 'ok') { opts.onPermission && opts.onPermission(status); return null; }
+    const rec = this.create(locale, opts);
+    if (rec) rec.start();
+    return rec;
+  },
+};
+
+// Shared, user-friendly Korean guidance for a permission failure.
+window.CT_MIC_HELP = function(status) {
+  switch (status) {
+    case 'denied':
+      return '마이크 권한이 거부됐어요. 주소창 왼쪽 자물쇠(또는 ⓘ) → 권한 → 마이크 → 허용으로 바꾼 뒤 다시 시도해 주세요.';
+    case 'overlay':
+      return '다른 앱의 떠 있는 창(버블·음량 표시 등)이 마이크를 막고 있어요. 그 창을 닫고 다시 시도해 주세요.';
+    case 'nodevice':
+      return '마이크를 찾을 수 없어요. 헤드셋·마이크 연결을 확인해 주세요.';
+    case 'unsupported':
+      return '이 브라우저는 음성 인식을 지원하지 않아요. Chrome 또는 Safari 최신 버전에서 사용해 주세요.';
+    default:
+      return '마이크를 사용할 수 없어요. 잠시 후 다시 시도해 주세요.';
+  }
 };
