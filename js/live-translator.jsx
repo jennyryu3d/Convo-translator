@@ -114,25 +114,34 @@ function LiveTranslator({ tweaks, setTweak }) {
   // then translate it into the OTHER conversation language. Shows a popup.
   function handleWordTap(word, fullSentence, sentenceLang, ev, tapId) {
     try { ev && ev.stopPropagation(); } catch (e) {}
+    const rect = (ev && ev.currentTarget && ev.currentTarget.getBoundingClientRect)
+      ? ev.currentTarget.getBoundingClientRect() : null;
+    const anchor = rect
+      ? { x: rect.left + rect.width / 2, y: rect.top, bottom: rect.bottom }
+      : { x: window.innerWidth / 2, y: window.innerHeight / 2, bottom: window.innerHeight / 2 };
 
     const targetName = window.CT_LANG.byCode(target).native;
     const nativeName = window.CT_LANG.byCode(native).native;
     const fromName = sentenceLang === 'target' ? targetName : nativeName;
     const toName   = sentenceLang === 'target' ? nativeName : targetName;
 
-    // term = text to pronounce (the source word/phrase). translation = result.
-    // hlSentence + hlSelected drive the in-text highlight. tapId identifies the
-    // exact text element clicked so only that one highlights.
-    setWordPop({ term: word, translation: '', loading: true, hlSentence: fullSentence, hlSelected: word, tapId: tapId || null });
+    // term = text to pronounce. translation = result. hl* drive the highlight.
+    // x/y/bottom position the floating popup above the tapped word.
+    setWordPop({ term: word, translation: '', loading: true, hlSentence: fullSentence, hlSelected: word, tapId: tapId || null, x: anchor.x, y: anchor.y, bottom: anchor.bottom });
 
     (async () => {
       try {
         const res = await window.CT_API.complete(
           `In the ${fromName} sentence below, the user tapped the word "${word}". ` +
-          `If that word is part of a meaningful phrase, idiom, or multi-word expression, ` +
-          `select the WHOLE phrase; otherwise just the single word. ` +
-          `Then translate the selected text into natural ${toName}.\n` +
-          `Return strict one-line JSON: {"selected":"<the word or phrase in ${fromName}>","translation":"<${toName} translation>"}\n\n` +
+          `Translate it into natural ${toName}. ` +
+          `By DEFAULT translate ONLY the single tapped word. ` +
+          `Expand to a multi-word unit ONLY if the tapped word does not carry its own meaning alone — ` +
+          `i.e. it is part of a fixed idiom, phrasal verb, or set expression whose meaning cannot be ` +
+          `understood from the word by itself (e.g. "look forward to", "give up", "by the way"). ` +
+          `Do NOT include surrounding objects, time phrases, or modifiers that have their own separate meaning ` +
+          `(e.g. for "reschedule for tomorrow", select just "reschedule"). ` +
+          `Keep the selection as SHORT as possible.\n` +
+          `Return strict one-line JSON: {"selected":"<the word or minimal phrase in ${fromName}>","translation":"<${toName} translation>"}\n\n` +
           `Sentence: ${fullSentence}`
         );
         const raw = String(res).trim().replace(/^```json\s*/i,'').replace(/```\s*$/,'');
@@ -646,42 +655,48 @@ function TappableText({ text, lang, id }) {
   );
 }
 
-// Compact popup: translation + listen + close. No repeated source word (it's
-// highlighted in the text instead). Tap anywhere outside to dismiss.
+// Floating mini popup anchored above the tapped word. No backdrop dim — just a
+// transparent layer to catch outside taps. Sized to its content.
 function WordPopup({ pop, palette, onClose }) {
   const c = palette;
   if (!pop) return null;
+
+  const PADDING = 8; // viewport edge padding
+  const popW = 240;  // max width; actual box shrinks to content via inline-flex
+  // Horizontal: center on the word but clamp so the (centered) box stays on-screen.
+  const half = popW / 2;
+  let left = (pop.x || 0);
+  const vw = (typeof window !== 'undefined' ? window.innerWidth : 380);
+  left = Math.max(half + PADDING, Math.min(left, vw - half - PADDING));
+  // Vertical: prefer above the word; if too close to top, drop below.
+  const above = (pop.y || 0) > 90;
+  const top = above ? (pop.y - 10) : ((pop.bottom || pop.y) + 10);
+
   return (
     <div onClick={onClose} style={{
-      position: 'fixed', inset: 0, zIndex: 300,
-      background: 'rgba(0,18,38,0.12)',
-      display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24,
+      position: 'fixed', inset: 0, zIndex: 300, background: 'transparent',
     }}>
       <div onClick={e => e.stopPropagation()} style={{
-        background: c.surface, borderRadius: 14, padding: '10px 12px 12px',
-        maxWidth: 260, minWidth: 180,
-        boxShadow: '0 10px 30px rgba(0,18,38,0.28)', border: `1px solid ${c.divider}`,
-        display: 'flex', flexDirection: 'column', gap: 8,
+        position: 'fixed',
+        left, top,
+        transform: `translate(-50%, ${above ? '-100%' : '0'})`,
+        maxWidth: popW,
+        background: c.surface, borderRadius: 12, padding: '8px 10px',
+        boxShadow: '0 8px 24px rgba(0,18,38,0.30), 0 2px 6px rgba(0,18,38,0.18)',
+        border: `1px solid ${c.divider}`,
+        display: 'inline-flex', alignItems: 'center', gap: 8,
+        whiteSpace: 'nowrap',
       }}>
-        <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: -4 }}>
-          <button onClick={onClose} style={{
-            width: 24, height: 24, borderRadius: 999, border: 'none', cursor: 'pointer',
-            background: 'transparent', color: c.ink3, display: 'flex', alignItems: 'center', justifyContent: 'center',
-          }} aria-label="닫기">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
-          </button>
-        </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <div style={{ flex: 1, fontSize: 15, color: c.primary, fontWeight: 700, lineHeight: 1.4 }}>
-            {pop.loading ? <span style={{ color: c.ink3, fontWeight: 500 }}>번역 중…</span> : pop.translation}
-          </div>
-          <button onClick={() => window.CT_SPEAK && window.CT_SPEAK.once(pop.term)} style={{
-            flexShrink: 0, width: 30, height: 30, borderRadius: 999, border: 'none', cursor: 'pointer',
-            background: c.primarySoft, color: c.primary, display: 'flex', alignItems: 'center', justifyContent: 'center',
-          }} title="듣기" aria-label="듣기">
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 5L6 9H2v6h4l5 4V5z"/><path d="M15.5 8.5a4 4 0 0 1 0 7"/><path d="M19 5a8 8 0 0 1 0 14"/></svg>
-          </button>
-        </div>
+        <span style={{ fontSize: 15, color: c.primary, fontWeight: 700, lineHeight: 1.3,
+          whiteSpace: 'normal', maxWidth: popW - 50, display: 'inline-block' }}>
+          {pop.loading ? <span style={{ color: c.ink3, fontWeight: 500 }}>번역 중…</span> : pop.translation}
+        </span>
+        <button onClick={() => window.CT_SPEAK && window.CT_SPEAK.once(pop.term)} style={{
+          flexShrink: 0, width: 28, height: 28, borderRadius: 999, border: 'none', cursor: 'pointer',
+          background: c.primarySoft, color: c.primary, display: 'flex', alignItems: 'center', justifyContent: 'center',
+        }} title="듣기" aria-label="듣기">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 5L6 9H2v6h4l5 4V5z"/><path d="M15.5 8.5a4 4 0 0 1 0 7"/><path d="M19 5a8 8 0 0 1 0 14"/></svg>
+        </button>
       </div>
     </div>
   );
