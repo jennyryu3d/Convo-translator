@@ -20,6 +20,7 @@ function LiveTranslator({ tweaks, setTweak }) {
   const [settingsOpen, setSettingsOpen] = React.useState(false);
   const [saveOpen, setSaveOpen] = React.useState(false);
   const [saveAuto, setSaveAuto] = React.useState(false); // did the save sheet auto-open?
+  const [pendingNew, setPendingNew] = React.useState(false); // save sheet opened via "새 대화"
   const promptedRef = React.useRef(false);   // only auto-prompt once per conversation
   const idleRef = React.useRef(null);
 
@@ -56,6 +57,25 @@ function LiveTranslator({ tweaks, setTweak }) {
   function startNewConversation() {
     setConvo([]);
     promptedRef.current = false;
+  }
+
+  // Bottom bar: "대화 저장" — open the save sheet manually (only when there's
+  // something to save).
+  function handleSaveConvo() {
+    if (!convo.length) return;
+    setSaveAuto(false);
+    setPendingNew(false);
+    setSaveOpen(true);
+  }
+
+  // Bottom bar: "새 대화" — if there's an unsaved conversation, ask to save
+  // first by opening the save sheet (flagged as pendingNew). If empty, just
+  // reset.
+  function handleNewConversation() {
+    if (!convo.length) { startNewConversation(); return; }
+    setSaveAuto(false);
+    setPendingNew(true);
+    setSaveOpen(true);
   }
 
   function nowStamp() {
@@ -219,6 +239,11 @@ function LiveTranslator({ tweaks, setTweak }) {
         })}
       </div>
 
+      {convo.length > 0 && (
+        <ConvoActionBar palette={c} fontScale={fontScale}
+          onSave={handleSaveConvo} onNew={handleNewConversation} />
+      )}
+
       <LiveInput palette={c} dark={dark} fontScale={fontScale}
         appMode={appMode} onModeChange={setAppMode}
         onSendMine={sendMine} onSendThem={sendThem}
@@ -256,12 +281,19 @@ function LiveTranslator({ tweaks, setTweak }) {
           palette={c} dark={dark}
           convo={convo} target={target} native={native}
           autoOpened={saveAuto}
-          onSaved={() => { setSaveOpen(false); setSaveAuto(false); startNewConversation(); }}
-          onDelete={() => { setSaveOpen(false); setSaveAuto(false); startNewConversation(); }}
-          onDismiss={() => { setSaveOpen(false); setSaveAuto(false); }}
+          pendingNew={pendingNew}
+          onSaved={() => { setSaveOpen(false); setSaveAuto(false); setPendingNew(false); startNewConversation(); }}
+          onDelete={() => { setSaveOpen(false); setSaveAuto(false); setPendingNew(false); startNewConversation(); }}
+          onDismiss={() => {
+            // "나중에": if this was a "새 대화" request, start fresh anyway
+            // (the user chose not to save); otherwise just close.
+            const wasPendingNew = pendingNew;
+            setSaveOpen(false); setSaveAuto(false); setPendingNew(false);
+            if (wasPendingNew) startNewConversation();
+          }}
           onSnooze={() => {
             try { localStorage.setItem('ct_save_prompt_off', new Date().toDateString()); } catch (e) {}
-            setSaveOpen(false); setSaveAuto(false);
+            setSaveOpen(false); setSaveAuto(false); setPendingNew(false);
           }}
         />
       )}
@@ -386,6 +418,44 @@ function TheirBubbleStyled({ msg, palette, dark, children, radius, shadow, fontS
         <div style={{ fontSize: 10 * fontScale, color: c.ink3, marginTop: 4, marginLeft: 4 }}>{msg.time}</div>
         {children}
       </div>
+    </div>
+  );
+}
+
+// Bottom action bar shown above the input whenever a conversation is in
+// progress. Two clear actions: save this conversation, or start a new one.
+function ConvoActionBar({ palette, fontScale = 1, onSave, onNew }) {
+  const c = palette;
+  const btn = (filled) => ({
+    flex: 1, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+    height: 40, borderRadius: 999, cursor: 'pointer',
+    fontSize: 13 * fontScale, fontWeight: 800, fontFamily: 'inherit',
+    border: filled ? 'none' : `1.5px solid ${c.divider}`,
+    background: filled ? c.primary : 'transparent',
+    color: filled ? c.primaryInk : c.ink2,
+    boxShadow: filled ? `0 3px 10px ${c.primary}44` : 'none',
+    transition: 'all .15s',
+  });
+  return (
+    <div style={{
+      flexShrink: 0, display: 'flex', gap: 8,
+      padding: '10px 12px 0',
+      background: c.surface,
+    }}>
+      {/* 새 대화 (secondary) */}
+      <button onClick={onNew} style={btn(false)}>
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M12 5v14M5 12h14"/>
+        </svg>
+        새 대화
+      </button>
+      {/* 대화 저장 (primary) */}
+      <button onClick={onSave} style={btn(true)}>
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/>
+        </svg>
+        대화 저장
+      </button>
     </div>
   );
 }

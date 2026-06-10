@@ -52,57 +52,7 @@ window.CT_BRAND = {
   },
 };
 
-window.CT_CONVO = [
-  {
-    id: 1,
-    side: 'me',
-    orig: '안녕하세요, 만나서 반갑습니다.',
-    trans: 'Hi, nice to meet you in person.',
-    inputKind: 'foreign',
-    time: '오전 10:02',
-  },
-  {
-    id: 2,
-    side: 'them',
-    orig: 'Likewise! Did you have a chance to review the proposal I sent over yesterday?',
-    trans: '저도 반갑습니다! 어제 보내드린 제안서 한번 보실 시간 있으셨어요?',
-    time: '오전 10:02',
-    suggestions: [
-      {
-        en: "Yes, I went through it last night. I have a few questions about the timeline.",
-        ko: '네, 어젯밤에 다 봤습니다. 일정 관련해서 몇 가지 여쭤보고 싶어요.',
-        tone: '긍정',
-      },
-      {
-        en: "I started reviewing it but didn't finish. Could you give me until tomorrow?",
-        ko: '검토 시작했는데 다 못 봤어요. 내일까지 시간 주실 수 있을까요?',
-        tone: '보류',
-      },
-      {
-        en: "Not yet, sorry. Could you walk me through the main points?",
-        ko: '아직 못 봤어요, 죄송합니다. 주요 내용만 간단히 설명해 주실 수 있나요?',
-        tone: '요청',
-      },
-    ],
-  },
-  {
-    id: 3,
-    side: 'me',
-    orig: 'Yes I read it last night. I has few question about schedule.',
-    trans: 'Yes, I read it last night. I have a few questions about the schedule.',
-    inputKind: 'polished',
-    time: '오전 10:03',
-  },
-  {
-    id: 4,
-    side: 'them',
-    orig: "Of course. The timeline assumes we kick off next Monday with a two-week design phase. Does that work for your team?",
-    trans: '물론이죠. 다음 주 월요일 착수 후 2주간 디자인 단계로 잡혀 있는데, 그쪽 팀에서 가능하실까요?',
-    time: '오전 10:04',
-    suggestions: [
-      { en: "Monday is tight, but doable. Could we extend the design phase to three weeks?", ko: '월요일 시작은 빠듯하지만 가능해요. 디자인 단계를 3주로 늘릴 수 있을까요?', tone: '제안' },
-      { en: "That works for us. We'll have the design team ready by Monday.", ko: '저희도 가능합니다. 월요일까지 디자인팀 준비시켜 두겠습니다.', tone: '동의' },
-      { en: "Let me check with my team and get back to you by end of day.", ko: '팀과 확인 후 오늘 안으로 답변 드릴게요.', tone: '보류' },
-    ],
-  },
-];
+// Demo conversation removed for production — the app starts with an empty
+// conversation. (Variation/artboard screens that referenced CT_CONVO will
+// simply render the empty state.)
+window.CT_CONVO = [];

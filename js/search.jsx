@@ -5,7 +5,7 @@
 function SearchOverlay({ palette, dark, onClose, embedded = false, onJump, initialEmpty = false }) {
   const c = palette;
   const I = window.CT_ICONS;
-  const [q, setQ] = React.useState(embedded && !initialEmpty ? '디자인' : '');
+  const [q, setQ] = React.useState('');
   const [filter, setFilter] = React.useState('all');  // all | mine | them
   const inputRef = React.useRef(null);
   const bodyRef = window.useDragScroll();
@@ -104,7 +104,10 @@ function SearchOverlay({ palette, dark, onClose, embedded = false, onJump, initi
 
       {/* Body */}
       <div ref={bodyRef} style={{ flex: 1, minHeight: 0, overflowY: 'auto', padding: '12px 12px 20px' }}>
-        {!q && <RecentList c={c} sessions={recent} onPickSession={s => setQ(s.topic.split(' ')[0])} />}
+        {!q && (recent.length > 0
+          ? <RecentList c={c} sessions={recent} onPickSession={s => setQ((s.topic || s.partner || '').split(' ')[0])} />
+          : <NoSavedYet c={c} />
+        )}
         {q && grouped.length === 0 && <EmptyResults c={c} q={q} />}
         {q && grouped.map(g => (
           <ResultGroup key={g.session.id} c={c} group={g} q={q} onJump={onJump} />
@@ -134,6 +137,27 @@ function FilterPill({ c, on, onClick, label, count }) {
         }}>{count}</span>
       )}
     </button>
+  );
+}
+
+function NoSavedYet({ c }) {
+  return (
+    <div style={{ marginTop: 36, textAlign: 'center', padding: '0 28px' }}>
+      <div style={{
+        width: 56, height: 56, borderRadius: 16, margin: '0 auto 14px',
+        background: c.primarySoft, color: c.primary,
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+      }}>
+        <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>
+      </div>
+      <div style={{ fontSize: 14, fontWeight: 700, color: c.ink2, marginBottom: 6 }}>
+        아직 저장된 대화가 없어요
+      </div>
+      <div style={{ fontSize: 12, color: c.ink3, lineHeight: 1.6 }}>
+        대화를 나눈 뒤 <b style={{ color: c.primary }}>대화 저장</b>을 누르면<br/>
+        여기에서 한글·영어로 검색해 다시 찾을 수 있어요
+      </div>
+    </div>
   );
 }
 
@@ -176,7 +200,7 @@ function RecentList({ c, sessions, onPickSession }) {
         fontSize: 12, color: c.ink2, lineHeight: 1.7,
       }}>
         한글 또는 영어로 자유롭게 검색하세요.<br />
-        예: <Pill c={c}>일정</Pill> <Pill c={c}>timeline</Pill> <Pill c={c}>OAuth</Pill> <Pill c={c}>벨렘</Pill>
+        제목·요약·대화 내용 모두 검색돼요.
       </div>
     </>
   );

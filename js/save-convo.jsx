@@ -28,7 +28,7 @@ function todayLabel() {
   return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
 }
 
-function SaveConvoSheet({ palette, dark, convo, target, native, onSaved, onDelete, onDismiss, onSnooze, autoOpened }) {
+function SaveConvoSheet({ palette, dark, convo, target, native, onSaved, onDelete, onDismiss, onSnooze, autoOpened, pendingNew }) {
   const c = palette;
   const nativeLang = window.CT_LANG.byCode(native);
   const [title, setTitle] = React.useState('');
@@ -116,9 +116,9 @@ function SaveConvoSheet({ palette, dark, convo, target, native, onSaved, onDelet
           </div>
           <div>
             <div style={{ fontSize: 16, fontWeight: 700, color: c.ink, fontFamily: "'Chakra Petch', system-ui, sans-serif" }}>
-              이 대화를 저장할까요?
+              {pendingNew ? '새 대화를 시작할까요?' : '이 대화를 저장할까요?'}
             </div>
-            <div style={{ fontSize: 11, color: c.ink3 }}>제목과 요약을 편집할 수 있어요 · 나중에 검색으로 찾기</div>
+            <div style={{ fontSize: 11, color: c.ink3 }}>{pendingNew ? '현재 대화를 저장하거나, 저장 없이 새로 시작할 수 있어요' : '제목과 요약을 편집할 수 있어요 · 나중에 검색으로 찾기'}</div>
           </div>
         </div>
 
@@ -173,7 +173,7 @@ function SaveConvoSheet({ palette, dark, convo, target, native, onSaved, onDelet
           <button onClick={onDismiss} style={{
             padding: '12px 16px', borderRadius: 999, border: `1.5px solid ${c.divider}`, cursor: 'pointer',
             background: 'transparent', color: c.ink2, fontSize: 13, fontWeight: 700,
-          }}>나중에</button>
+          }}>{pendingNew ? '저장 안 함' : '나중에'}</button>
           <button onClick={doSave} style={{
             padding: '12px 22px', borderRadius: 999, border: 'none', cursor: 'pointer',
             background: c.primary, color: c.primaryInk, fontSize: 13, fontWeight: 800,
