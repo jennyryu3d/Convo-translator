@@ -2,7 +2,7 @@
 // both original text and translations. Results group by session/date,
 // highlight matched terms, and tap to jump to that message in the chat.
 
-function SearchOverlay({ palette, dark, onClose, embedded = false, onJump, initialEmpty = false }) {
+function SearchOverlay({ palette, dark, onClose, embedded = false, onJump, onOpenSession, initialEmpty = false }) {
   const c = palette;
   const I = window.CT_ICONS;
   const [q, setQ] = React.useState('');
@@ -105,12 +105,12 @@ function SearchOverlay({ palette, dark, onClose, embedded = false, onJump, initi
       {/* Body */}
       <div ref={bodyRef} style={{ flex: 1, minHeight: 0, overflowY: 'auto', padding: '12px 12px 20px' }}>
         {!q && (recent.length > 0
-          ? <RecentList c={c} sessions={recent} onPickSession={s => setQ((s.topic || s.partner || '').split(' ')[0])} />
+          ? <RecentList c={c} sessions={recent} onPickSession={s => onOpenSession ? onOpenSession(s) : setQ((s.topic || s.partner || '').split(' ')[0])} />
           : <NoSavedYet c={c} />
         )}
         {q && grouped.length === 0 && <EmptyResults c={c} q={q} />}
         {q && grouped.map(g => (
-          <ResultGroup key={g.session.id} c={c} group={g} q={q} onJump={onJump} />
+          <ResultGroup key={g.session.id} c={c} group={g} q={q} onJump={onJump} onOpenSession={onOpenSession} />
         ))}
       </div>
     </div>
@@ -266,11 +266,13 @@ function Highlight({ text, q }) {
 }
 
 // ── Result group (one session) ────────────────────────────────────────
-function ResultGroup({ c, group, q, onJump }) {
+function ResultGroup({ c, group, q, onJump, onOpenSession }) {
   const s = group.session;
   return (
     <div style={{ marginBottom: 14 }}>
-      <div style={{
+      <button onClick={() => onOpenSession && onOpenSession(s)} style={{
+        width: '100%', textAlign: 'left', border: 'none', cursor: onOpenSession ? 'pointer' : 'default',
+        background: 'transparent',
         display: 'flex', alignItems: 'center', gap: 8,
         padding: '4px 6px 8px', borderBottom: `1px solid ${c.divider}`,
         marginBottom: 8,
@@ -293,7 +295,7 @@ function ResultGroup({ c, group, q, onJump }) {
           fontSize: 10, fontWeight: 800, color: c.primary,
           background: c.primarySoft, padding: '2px 8px', borderRadius: 999,
         }}>{group.hits.length}건</div>
-      </div>
+      </button>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
         {group.hits.map((h, i) => (
           <ResultRow key={i} c={c} hit={h} q={q} onJump={onJump} />

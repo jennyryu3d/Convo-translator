@@ -41,7 +41,12 @@ function SaveConvoSheet({ palette, dark, convo, target, native, onSaved, onDelet
     (async () => {
       const transcript = convo.map(m => {
         const who = m.side === 'me' ? 'Me' : 'Them';
-        return `${who}: ${m.orig}${m.trans ? ' (' + m.trans + ')' : ''}`;
+        let line = `${who}: ${m.orig}${m.trans ? ' (' + m.trans + ')' : ''}`;
+        if (m.side === 'them' && typeof m.pickedIdx === 'number' && m.suggestions && m.suggestions[m.pickedIdx]) {
+          const pick = m.suggestions[m.pickedIdx];
+          line += `\nMe: ${pick.en}${pick.ko ? ' (' + pick.ko + ')' : ''}`;
+        }
+        return line;
       }).join('\n');
       try {
         const res = await window.CT_API.complete(
@@ -78,7 +83,20 @@ function SaveConvoSheet({ palette, dark, convo, target, native, onSaved, onDelet
       topic: summary.trim().slice(0, 60) || '저장된 대화',
       date: todayLabel(),
       label: '저장됨',
-      messages: convo.map(m => ({ side: m.side, orig: m.orig, trans: m.trans, time: m.time })),
+      // Flatten: for each "them" message, keep it; if I picked one of its
+      // suggestions, append my chosen reply as a "me" message so the saved
+      // transcript reads as a real back-and-forth.
+      messages: (() => {
+        const out = [];
+        for (const m of convo) {
+          out.push({ side: m.side, orig: m.orig, trans: m.trans, time: m.time });
+          if (m.side === 'them' && typeof m.pickedIdx === 'number' && m.suggestions && m.suggestions[m.pickedIdx]) {
+            const pick = m.suggestions[m.pickedIdx];
+            out.push({ side: 'me', orig: pick.ko, trans: pick.en, time: m.time, inputKind: 'picked' });
+          }
+        }
+        return out;
+      })(),
     };
     window.CT_SAVED.save(entry);
     onSaved && onSaved(entry);

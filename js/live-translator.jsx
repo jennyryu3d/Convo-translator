@@ -21,6 +21,7 @@ function LiveTranslator({ tweaks, setTweak }) {
   const [saveOpen, setSaveOpen] = React.useState(false);
   const [saveAuto, setSaveAuto] = React.useState(false); // did the save sheet auto-open?
   const [pendingNew, setPendingNew] = React.useState(false); // save sheet opened via "새 대화"
+  const [viewSession, setViewSession] = React.useState(null); // saved session opened read-only
   const promptedRef = React.useRef(false);   // only auto-prompt once per conversation
   const idleRef = React.useRef(null);
 
@@ -83,6 +84,79 @@ function LiveTranslator({ tweaks, setTweak }) {
     const h = d.getHours();
     const m = String(d.getMinutes()).padStart(2, '0');
     return (h < 12 ? '오전 ' : '오후 ') + ((h % 12) || 12) + ':' + m;
+  }
+
+  // Pick (or re-pick) a suggestion attached to a "them" message.
+  // • Records the chosen index on that message so the card shows as selected
+  //   (cyan) while the 3 cards stay visible/accumulated.
+  // • LEARN mode: the choice becomes my turn and the AI partner replies,
+  //   continuing the conversation. Re-picking is only allowed while this group
+  //   is still the last thing in the conversation (handled by `locked` in the
+  //   UI, but we re-check here defensively).
+  // • LIVE mode: no AI reply — we just mark the selection and hold for the
+  //   other person's next real voice input.
+  function pickSuggestion(themId, s, idx) {
+    const isLive = appMode === 'live';
+
+    if (isLive) {
+      // LIVE: just mark the selection (re-pickable until the next real voice
+      // input arrives, which appends a new message and locks this group via UI).
+      setConvo(cv => {
+        const pos = cv.findIndex(m => m.id === themId);
+        if (pos < 0 || pos < cv.length - 1) return cv; // only the last group
+        const next = cv.slice();
+        next[pos] = { ...next[pos], pickedIdx: idx, pickedAt: Date.now() };
+        return next;
+      });
+      return;
+    }
+
+    // LEARN: mark the pick, DROP anything generated after this group (so a
+    // re-pick replaces the previous branch), then have the AI partner reply.
+    let baseConvo = null;
+    setConvo(cv => {
+      const pos = cv.findIndex(m => m.id === themId);
+      if (pos < 0) return cv;
+      const trimmed = cv.slice(0, pos + 1);
+      trimmed[pos] = { ...trimmed[pos], pickedIdx: idx, pickedAt: Date.now() };
+      baseConvo = trimmed;
+      return trimmed;
+    });
+
+    (async () => {
+      const targetName = window.CT_LANG.byCode(target).native;
+      const nativeName = window.CT_LANG.byCode(native).native;
+      const base = baseConvo || convo;
+      const recent = [...base].slice(-6).map(m =>
+        (m.side === 'me' ? 'A' : 'B') + ': ' + (m.trans || m.orig)
+      ).join('\n') + `\nA: ${s.en}`;
+      try {
+        const res = await window.CT_API.complete(
+          `You are simulating a natural conversation partner "B" replying to "A" in ${targetName}. ` +
+          `Reply realistically and specifically to A's last message, continuing the conversation naturally (1-2 sentences). ` +
+          `Then propose 3 short follow-up replies A could send next, each responding to YOUR reply.\n` +
+          `Return strict JSON on one line. "ko" MUST be a full natural ${nativeName} translation of the "en" sentence (NOT a category or keyword):\n` +
+          `{"reply":"<${targetName}>","reply_native":"<full ${nativeName} translation of reply>","suggestions":[{"en":"<${targetName} follow-up>","ko":"<full ${nativeName} translation>"},{"en":"...","ko":"..."},{"en":"...","ko":"..."}]}\n\n` +
+          `Conversation so far:\n${recent}`
+        );
+        const raw = String(res).trim().replace(/^```json\s*/i,'').replace(/```\s*$/,'');
+        const p = JSON.parse(raw);
+        setConvo(cv => [...cv, {
+          id: Date.now() + 1, side: 'them',
+          orig: p.reply, trans: p.reply_native, time: nowStamp(),
+          suggestions: (p.suggestions || []).slice(0, 3),
+        }]);
+      } catch (e) {
+        setConvo(cv => [...cv, {
+          id: Date.now() + 1, side: 'them', orig: 'Got it. Could you tell me more?', trans: '알겠어요. 좀 더 말씀해 주실래요?', time: nowStamp(),
+          suggestions: [
+            { en: 'Sure, let me explain.', ko: '네, 설명할게요.' },
+            { en: 'Can we talk about it later?', ko: '나중에 얘기해도 될까요?' },
+            { en: 'What do you think?', ko: '어떻게 생각하세요?' },
+          ],
+        }]);
+      }
+    })();
   }
 
   // Send MY message. In practice mode the AI replies; in live mode (opts.noReply)
@@ -221,28 +295,43 @@ function LiveTranslator({ tweaks, setTweak }) {
           if (m.side === 'me') {
             return <MyBubbleStyled key={m.id} msg={m} palette={c} radius={bubbleRadius} shadow={shadowStr} fontScale={fontScale} />;
           }
-          const isLast = i === convo.length - 1;
+          // Lock rule:
+          // • LIVE: only the very last suggestion group is editable.
+          // • LEARN: the last group, OR the second-to-last when the only thing
+          //   after it is the AI reply this pick generated (so you can re-pick
+          //   the most recent turn — re-picking trims that reply and regenerates).
+          let locked;
+          if (appMode === 'live') {
+            locked = i < convo.length - 1;
+          } else {
+            // editable if no message after it has its OWN pickedIdx set, i.e.
+            // this is the most recent decision point.
+            const laterPicked = convo.slice(i + 1).some(mm => typeof mm.pickedIdx === 'number');
+            locked = laterPicked;
+          }
           return (
             <TheirBubbleStyled key={m.id} msg={m} palette={c} dark={dark} radius={bubbleRadius} shadow={shadowStr} fontScale={fontScale} native={native}>
-              {m.suggestions && isLast && (
+              {m.suggestions && (
                 <SuggestionDisplay
                   variant={tweaks.suggStyle}
                   palette={c}
                   suggestions={m.suggestions}
                   dark={dark}
                   max={tweaks.maxSugg}
-                  onPick={s => sendMine(s.ko, s.en, 'picked', { noReply: appMode === 'live' })}
+                  pickedIdx={typeof m.pickedIdx === 'number' ? m.pickedIdx : null}
+                  locked={locked}
+                  onPick={(s, idx) => pickSuggestion(m.id, s, idx)}
                 />
               )}
             </TheirBubbleStyled>
           );
         })}
-      </div>
 
-      {convo.length > 0 && (
-        <ConvoActionBar palette={c} fontScale={fontScale}
-          onSave={handleSaveConvo} onNew={handleNewConversation} />
-      )}
+        {convo.length > 0 && (
+          <FloatingConvoActions palette={c}
+            onSave={handleSaveConvo} onNew={handleNewConversation} />
+        )}
+      </div>
 
       <LiveInput palette={c} dark={dark} fontScale={fontScale}
         appMode={appMode} onModeChange={setAppMode}
@@ -255,6 +344,17 @@ function LiveTranslator({ tweaks, setTweak }) {
           dark={dark}
           onClose={() => setSearchOpen(false)}
           onJump={() => setSearchOpen(false)}
+          onOpenSession={(sess) => { setViewSession(sess); setSearchOpen(false); }}
+        />
+      )}
+
+      {viewSession && (
+        <SavedConvoViewer
+          palette={c} dark={dark}
+          session={viewSession}
+          radius={bubbleRadius} shadow={shadowStr} fontScale={fontScale}
+          native={native}
+          onClose={() => setViewSession(null)}
         />
       )}
 
@@ -424,37 +524,114 @@ function TheirBubbleStyled({ msg, palette, dark, children, radius, shadow, fontS
 
 // Bottom action bar shown above the input whenever a conversation is in
 // progress. Two clear actions: save this conversation, or start a new one.
-function ConvoActionBar({ palette, fontScale = 1, onSave, onNew }) {
+// Read-only viewer for a saved conversation. Reuses the same bubble styles as
+// the live chat so it looks identical — just no input and no suggestions.
+function SavedConvoViewer({ palette, dark, session, radius, shadow, fontScale, native, onClose }) {
   const c = palette;
-  const btn = (filled) => ({
-    flex: 1, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 6,
-    height: 40, borderRadius: 999, cursor: 'pointer',
-    fontSize: 13 * fontScale, fontWeight: 800, fontFamily: 'inherit',
-    border: filled ? 'none' : `1.5px solid ${c.divider}`,
-    background: filled ? c.primary : 'transparent',
-    color: filled ? c.primaryInk : c.ink2,
-    boxShadow: filled ? `0 3px 10px ${c.primary}44` : 'none',
-    transition: 'all .15s',
+  const scrollRef = window.useDragScroll();
+  const msgs = (session && session.messages) || [];
+  return (
+    <div style={{
+      position: 'absolute', inset: 0, zIndex: 92,
+      background: c.bg, color: c.ink,
+      display: 'flex', flexDirection: 'column',
+      animation: 'svvIn .2s ease-out',
+    }}>
+      <style>{`@keyframes svvIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }`}</style>
+
+      {/* Header */}
+      <div style={{
+        flexShrink: 0, padding: '12px 12px 10px',
+        background: c.surface, borderBottom: `1px solid ${c.divider}`,
+        display: 'flex', alignItems: 'center', gap: 8,
+      }}>
+        <button onClick={onClose} style={{
+          width: 36, height: 36, borderRadius: 999, border: 'none',
+          background: 'transparent', color: c.ink2, cursor: 'pointer', flexShrink: 0,
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+        }} title="닫기">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
+        </button>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ fontSize: 14, fontWeight: 800, color: c.ink, lineHeight: 1.3, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', fontFamily: "'Chakra Petch', system-ui, sans-serif" }}>
+            {session.title || session.partner || '저장된 대화'}
+          </div>
+          <div style={{ fontSize: 11, color: c.ink3, marginTop: 1 }}>
+            {(session.label || '저장됨')} · {session.date || ''} · {msgs.length}개 메시지
+          </div>
+        </div>
+        <span style={{
+          fontSize: 9, fontWeight: 800, letterSpacing: 0.5, textTransform: 'uppercase',
+          color: c.ink3, background: c.bg, border: `1px solid ${c.divider}`,
+          padding: '3px 8px', borderRadius: 999, flexShrink: 0,
+        }}>읽기 전용</span>
+      </div>
+
+      {/* Summary (if any) */}
+      {session.summary && (
+        <div style={{
+          flexShrink: 0, padding: '10px 14px', background: c.surface,
+          borderBottom: `1px solid ${c.divider}`,
+          fontSize: 12, color: c.ink2, lineHeight: 1.5,
+        }}>
+          {session.summary}
+        </div>
+      )}
+
+      {/* Messages — same bubble styles as the live conversation */}
+      <div ref={scrollRef} style={{ flex: 1, minHeight: 0, overflowY: 'auto', padding: '12px 14px 24px' }}>
+        {msgs.length === 0 && (
+          <div style={{ marginTop: 40, textAlign: 'center', fontSize: 13, color: c.ink3 }}>
+            이 대화에는 저장된 메시지가 없어요.
+          </div>
+        )}
+        {msgs.map((m, i) => (
+          m.side === 'me'
+            ? <MyBubbleStyled key={i} msg={m} palette={c} radius={radius} shadow={shadow} fontScale={fontScale} />
+            : <TheirBubbleStyled key={i} msg={m} palette={c} dark={dark} radius={radius} shadow={shadow} fontScale={fontScale} native={native} />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// Floating action buttons that hover at the bottom-right of the conversation
+// area — they don't take layout space, so the chat body keeps full height.
+// + = new conversation, bookmark = save conversation.
+function FloatingConvoActions({ palette, onSave, onNew }) {
+  const c = palette;
+  const fab = (primary) => ({
+    width: 48, height: 48, borderRadius: 999,
+    display: 'flex', alignItems: 'center', justifyContent: 'center',
+    border: primary ? 'none' : `1.5px solid ${c.divider}`,
+    background: primary ? c.primary : c.surface,
+    color: primary ? c.primaryInk : c.ink2,
+    cursor: 'pointer',
+    boxShadow: primary
+      ? `0 4px 14px ${c.primary}66`
+      : '0 3px 10px rgba(0,18,38,0.16)',
+    transition: 'transform .12s',
   });
   return (
     <div style={{
-      flexShrink: 0, display: 'flex', gap: 8,
-      padding: '10px 12px 0',
-      background: c.surface,
+      position: 'sticky', bottom: 0, float: 'right',
+      // sticky+float keeps the buttons pinned to the bottom-right of the
+      // scroll viewport without consuming layout height.
+      display: 'flex', flexDirection: 'column', gap: 10,
+      alignItems: 'flex-end', pointerEvents: 'none',
+      marginRight: 2, marginTop: -56,
     }}>
-      {/* 새 대화 (secondary) */}
-      <button onClick={onNew} style={btn(false)}>
-        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+      {/* 새 대화 */}
+      <button onClick={onNew} title="새 대화" style={{ ...fab(false), pointerEvents: 'auto' }}>
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
           <path d="M12 5v14M5 12h14"/>
         </svg>
-        새 대화
       </button>
-      {/* 대화 저장 (primary) */}
-      <button onClick={onSave} style={btn(true)}>
-        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+      {/* 대화 저장 */}
+      <button onClick={onSave} title="대화 저장" style={{ ...fab(true), pointerEvents: 'auto' }}>
+        <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
           <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/>
         </svg>
-        대화 저장
       </button>
     </div>
   );

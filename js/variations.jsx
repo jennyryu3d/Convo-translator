@@ -128,17 +128,19 @@ function SuggNumberedStack({ palette, suggestions, dark, max = 3, onPick }) {
 // V3 — CARD DECK (one at a time)
 // One large card visible. Prev/next arrows + page dots. Like Tinder.
 // ═══════════════════════════════════════════════════════════════════════
-function SuggCardDeck({ palette, suggestions, dark, max = 3, onPick }) {
+function SuggCardDeck({ palette, suggestions, dark, max = 3, onPick, pickedIdx = null, locked = false }) {
   const c = palette;
   const list = suggestions.slice(0, max);
-  const [idx, setIdx] = React.useState(0);
+  // Start the carousel on the picked card if there is one.
+  const [idx, setIdx] = React.useState(typeof pickedIdx === 'number' ? pickedIdx : 0);
   const s = list[idx];
-  const tt = toneTint(s.tone, dark);
+  const isPicked = pickedIdx === idx;
+  const anyPicked = typeof pickedIdx === 'number';
+  // Selected card uses cyan (mine) color; unselected use AI deep-navy.
+  const cardBg = isPicked ? c.mine : c.ai;
+  const cardInk = isPicked ? (c.mineInk || '#002854') : (c.aiInk || '#fff');
   return (
-    <div style={{
-      marginTop: 10, padding: 14,
-      background: 'transparent',
-    }}>
+    <div style={{ marginTop: 10, padding: 14, background: 'transparent' }}>
       <div style={{
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
         marginBottom: 8,
@@ -149,79 +151,104 @@ function SuggCardDeck({ palette, suggestions, dark, max = 3, onPick }) {
           textTransform: 'uppercase',
         }}>
           {sparkleIcon} AI 제안 · {idx + 1}/{list.length}
+          {anyPicked && <span style={{ color: c.accent2, marginLeft: 4 }}>· 선택됨</span>}
         </span>
         <div style={{ display: 'flex', gap: 4 }}>
           {list.map((_, i) => (
             <button key={i} onClick={() => setIdx(i)} style={{
               width: i === idx ? 18 : 8, height: 8, borderRadius: 999,
               border: 'none', cursor: 'pointer',
-              background: i === idx ? c.ai : c.divider,
+              background: i === pickedIdx ? c.accent2 : (i === idx ? c.ai : c.divider),
               transition: 'all .2s',
             }} />
           ))}
         </div>
       </div>
-      <div style={{
-        position: 'relative', perspective: 800,
-      }}>
-        {/* stacked back cards for depth */}
+      <div style={{ position: 'relative', perspective: 800 }}>
         {idx < list.length - 1 && (
           <div style={{
             position: 'absolute', inset: 0, top: 8, left: 6, right: 6,
-            background: c.ai, borderRadius: 16,
-            opacity: 0.4, zIndex: 0,
-            transform: 'scale(0.96)',
+            background: cardBg, borderRadius: 16,
+            opacity: 0.4, zIndex: 0, transform: 'scale(0.96)',
           }} />
         )}
         <div style={{
           position: 'relative', zIndex: 1,
-          background: c.ai, borderRadius: 16,
+          background: cardBg, borderRadius: 16,
           padding: '16px 16px 14px',
-          boxShadow: `0 8px 24px ${c.ai}55`,
+          boxShadow: `0 8px 24px ${cardBg}55`,
+          outline: isPicked ? `2px solid ${c.accent2}` : 'none',
+          outlineOffset: 2,
         }}>
+          {isPicked && (
+            <div style={{
+              display: 'inline-flex', alignItems: 'center', gap: 4,
+              fontSize: 9, fontWeight: 800, letterSpacing: 0.5, textTransform: 'uppercase',
+              color: cardInk, opacity: 0.85, marginBottom: 6,
+            }}>
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12l5 5 9-11"/></svg>
+              내가 선택한 답변
+            </div>
+          )}
           <div style={{
-            fontSize: 17, color: c.aiInk || '#fff', fontWeight: 700, lineHeight: 1.4,
+            fontSize: 17, color: cardInk, fontWeight: 700, lineHeight: 1.4,
             letterSpacing: '-0.2px', marginBottom: 8,
           }}>{s.en}</div>
           <div style={{
-            fontSize: 13, color: c.aiInk || '#fff', opacity: 0.95, lineHeight: 1.45,
-            paddingTop: 8, borderTop: `1px dashed ${c.aiInk ? c.aiInk + '55' : 'rgba(255,255,255,0.35)'}`,
+            fontSize: 13, color: cardInk, opacity: 0.95, lineHeight: 1.45,
+            paddingTop: 8, borderTop: `1px dashed ${cardInk}55`,
+            display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 8,
           }}>
-            {s.ko}
+            <span style={{ flex: 1 }}>{s.ko}</span>
+            {/* Speaker button — plays the target-language (en) sentence */}
+            <button onClick={(e) => { e.stopPropagation(); window.CT_SPEAK && window.CT_SPEAK.once(s.en); }} style={{
+              flexShrink: 0, width: 30, height: 30, borderRadius: 999, border: 'none', cursor: 'pointer',
+              background: isPicked ? 'rgba(0,40,84,0.12)' : 'rgba(255,255,255,0.18)',
+              color: cardInk, display: 'flex', alignItems: 'center', justifyContent: 'center',
+            }} title="듣기" aria-label="듣기">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 5L6 9H2v6h4l5 4V5z"/><path d="M15.5 8.5a4 4 0 0 1 0 7"/><path d="M19 5a8 8 0 0 1 0 14"/></svg>
+            </button>
           </div>
         </div>
       </div>
-      {/* control row: single capsule, center-bright gradient, arrows inside both ends */}
+      {/* control row */}
       <div style={{
         display: 'flex', alignItems: 'stretch', marginTop: 12,
         borderRadius: 999, overflow: 'hidden',
         background: `linear-gradient(90deg, ${c.aiDeep || c.ai} 0%, ${c.ai} 28%, ${c.ai} 72%, ${c.aiDeep || c.ai} 100%)`,
         boxShadow: `0 6px 18px ${c.ai}66, inset 0 1px 0 rgba(255,255,255,0.25)`,
+        opacity: (locked && !isPicked) ? 0.92 : 1,
       }}>
         <button onClick={() => setIdx(Math.max(0, idx - 1))} disabled={idx === 0} style={{
           width: 50, border: 'none', cursor: idx === 0 ? 'default' : 'pointer',
-          background: 'transparent', color: '#fff',
-          opacity: idx === 0 ? 0.3 : 1,
+          background: 'transparent', color: '#fff', opacity: idx === 0 ? 0.3 : 1,
           display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
           filter: idx === 0 ? 'none' : 'drop-shadow(0 0 5px rgba(255,255,255,0.9))',
         }} aria-label="이전 답변">
           <svg width="25" height="25" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" strokeWidth="3.6" strokeLinecap="round" strokeLinejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
         </button>
 
-        <button onClick={() => onPick?.(s)} style={{
-          flex: 1, height: 48, border: 'none', cursor: 'pointer',
-          background: 'transparent', color: '#fff',
-          fontSize: 14, fontWeight: 800, letterSpacing: '0.01em',
-          display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7,
-        }}>
-          이 답변 사용하기
-          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14m-5-5 5 5-5 5"/></svg>
+        <button onClick={() => { if (!(locked && !isPicked)) onPick?.(s, idx); }}
+          disabled={locked && !isPicked}
+          style={{
+            flex: 1, height: 48, border: 'none',
+            cursor: (locked && !isPicked) ? 'default' : 'pointer',
+            background: 'transparent', color: '#fff',
+            fontSize: 14, fontWeight: 800, letterSpacing: '0.01em',
+            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7,
+          }}>
+          {isPicked ? '선택한 답변' : locked ? '지난 제안' : '이 답변 사용하기'}
+          {!locked && !isPicked && (
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14m-5-5 5 5-5 5"/></svg>
+          )}
+          {isPicked && (
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12l5 5 9-11"/></svg>
+          )}
         </button>
 
         <button onClick={() => setIdx(Math.min(list.length - 1, idx + 1))} disabled={idx === list.length - 1} style={{
           width: 50, border: 'none', cursor: idx === list.length - 1 ? 'default' : 'pointer',
-          background: 'transparent', color: '#fff',
-          opacity: idx === list.length - 1 ? 0.3 : 1,
+          background: 'transparent', color: '#fff', opacity: idx === list.length - 1 ? 0.3 : 1,
           display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
           filter: idx === list.length - 1 ? 'none' : 'drop-shadow(0 0 5px rgba(255,255,255,0.9))',
         }} aria-label="다음 답변">
@@ -429,7 +456,7 @@ function SuggBranchPaths({ palette, suggestions, dark, max = 3, onPick }) {
 }
 
 // Router
-function SuggestionDisplay({ variant, palette, suggestions, dark, max = 3, onPick }) {
+function SuggestionDisplay({ variant, palette, suggestions, dark, max = 3, onPick, pickedIdx = null, locked = false }) {
   if (!suggestions || !suggestions.length) return null;
   const map = {
     chips: SuggKeyboardStrip,
@@ -440,7 +467,7 @@ function SuggestionDisplay({ variant, palette, suggestions, dark, max = 3, onPic
     tabbed: SuggBranchPaths,
   };
   const Cmp = map[variant] || SuggCardDeck;
-  return <Cmp palette={palette} suggestions={suggestions} dark={dark} max={max} onPick={onPick} />;
+  return <Cmp palette={palette} suggestions={suggestions} dark={dark} max={max} onPick={onPick} pickedIdx={pickedIdx} locked={locked} />;
 }
 
 Object.assign(window, {

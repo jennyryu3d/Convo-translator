@@ -77,9 +77,6 @@ function TopBar({ palette, dark, onToggleDark, showMascot = true, onSearch, onSe
               <circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/>
             </svg>
           </HeaderIcon>
-          <HeaderIcon onClick={onSaveConvo} ariaLabel="save conversation">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>
-          </HeaderIcon>
           <HeaderIcon onClick={onToggleDark} ariaLabel="theme">{dark ? window.CT_ICONS.sun : window.CT_ICONS.moon}</HeaderIcon>
           <HeaderIcon onClick={onHistory} ariaLabel="history">{window.CT_ICONS.history}</HeaderIcon>
           <HeaderIcon onClick={onSettings} ariaLabel="settings">{window.CT_ICONS.settings}</HeaderIcon>
