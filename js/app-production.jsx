@@ -11,6 +11,7 @@ const PROD_TWEAK_DEFAULTS = /*EDITMODE-BEGIN*/{
   "bubbleRadius": 22,
   "bubbleShadow": "soft",
   "showMascot": true,
+  "skin": "blue",
   "target": "EN",
   "native": "KO"
 }/*EDITMODE-END*/;

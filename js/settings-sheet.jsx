@@ -1,12 +1,12 @@
 // App version + settings sheet (bottom-sheet) showing version info.
 window.CT_VERSION = {
-  number: '1.1.0',
-  build: '2026.06.09',
+  number: '1.2.0',
+  build: '2026.06.10',
   label: 'Beta',
-  notes: '실시간 통역/혼자 연습 모드 분리 · 모바일 마이크 권한 개선 · 대화 저장',
+  notes: '제안 카드 누적·음성출력·선택 교체 · 단어/구 탭 번역 · 대화 자동 임시저장 · 저장 대화 다시보기 · 색상 스킨(블루·골드·로즈) · 플로팅 새대화/저장 버튼',
 };
 
-function SettingsSheet({ palette, dark, onClose, target, native }) {
+function SettingsSheet({ palette, dark, onClose, target, native, skinId = 'blue', onPickSkin }) {
   const c = palette;
   const v = window.CT_VERSION;
   const tgt = window.CT_LANG.byCode(target);
@@ -59,6 +59,37 @@ function SettingsSheet({ palette, dark, onClose, target, native }) {
           <Row c={c} label="내 모국어" value={`${nat.name} (${nat.code})`} />
           <Row c={c} label="음성 인식" value={sttOK ? '지원됨' : '미지원 브라우저'} ok={sttOK} />
           <Row c={c} label="API 연결" value={window.CT_API.needsKey() ? (window.CT_API.getKey() ? '연결됨 (내 키)' : '키 필요') : '디자인 환경'} ok={!window.CT_API.needsKey() || !!window.CT_API.getKey()} last />
+        </div>
+
+        {/* Color skin picker */}
+        <div style={{ padding: '14px 18px 0' }}>
+          <div style={{ fontSize: 10, fontWeight: 800, letterSpacing: 0.6, textTransform: 'uppercase', color: c.ink3, marginBottom: 8, fontFamily: "'Chakra Petch', system-ui, sans-serif" }}>
+            색상 테마
+          </div>
+          <div style={{ display: 'flex', gap: 10 }}>
+            {Object.keys(window.CT_SKINS || {}).map(id => {
+              const sk = window.CT_SKINS[id];
+              const on = id === skinId;
+              return (
+                <button key={id} onClick={() => onPickSkin && onPickSkin(id)} style={{
+                  flex: 1, cursor: 'pointer', borderRadius: 14, padding: '12px 8px',
+                  border: on ? `2px solid ${sk.swatch}` : `1.5px solid ${c.divider}`,
+                  background: on ? sk.swatch + '14' : c.bg,
+                  display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 7,
+                  fontFamily: 'inherit',
+                }}>
+                  <span style={{
+                    width: 30, height: 30, borderRadius: 999, background: sk.swatch,
+                    boxShadow: on ? `0 0 0 3px ${sk.swatch}44` : 'none',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  }}>
+                    {on && <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="3.2" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12l5 5 9-11"/></svg>}
+                  </span>
+                  <span style={{ fontSize: 12, fontWeight: 700, color: on ? c.ink : c.ink2 }}>{sk.name}</span>
+                </button>
+              );
+            })}
+          </div>
         </div>
 
         <div style={{ padding: '12px 18px 0' }}>

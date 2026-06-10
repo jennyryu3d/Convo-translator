@@ -3,17 +3,28 @@
 
 function LiveTranslator({ tweaks, setTweak }) {
   const dark = tweaks.theme === 'dark';
-  const palette = window.CT_BRAND[dark ? 'dark' : 'light'];
+  const mode = dark ? 'dark' : 'light';
+  const basePalette = window.CT_BRAND[mode];
 
-  // Override primary color from tweaks
-  const c = React.useMemo(() => {
-    const p = { ...palette };
-    p.primary = tweaks.primary;
-    p.primaryInk = tweaks.primaryInk || '#fff';
-    return p;
-  }, [palette, tweaks.primary, tweaks.primaryInk]);
+  // Selected color skin (blue | gold | rose). Persisted so it survives reloads.
+  const skinId = tweaks.skin || (function(){ try { return localStorage.getItem('ct_skin') || 'blue'; } catch(e){ return 'blue'; } })();
+
+  // Apply skin tokens on top of the base palette for this light/dark mode.
+  const palette = React.useMemo(() => {
+    return (window.CT_applySkin ? window.CT_applySkin(basePalette, skinId, mode) : basePalette);
+  }, [basePalette, skinId, mode]);
+
+  // The skin already sets `primary`. We no longer override from tweaks.primary
+  // so the skin stays coherent (buttons + cards matched).
+  const c = palette;
 
   const DRAFT_KEY = 'ct_draft_convo_v1';
+
+  // Change color skin: persist + update tweaks so it applies immediately.
+  function setSkin(id) {
+    try { localStorage.setItem('ct_skin', id); } catch (e) {}
+    if (setTweak) setTweak('skin', id);
+  }
   const [convo, setConvo] = React.useState(() => {
     // Restore an in-progress (unsaved) conversation if the app was reopened.
     try {
@@ -445,6 +456,7 @@ function LiveTranslator({ tweaks, setTweak }) {
         <window.SettingsSheet
           palette={c} dark={dark}
           target={target} native={native}
+          skinId={skinId} onPickSkin={setSkin}
           onClose={() => setSettingsOpen(false)}
         />
       )}
