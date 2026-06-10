@@ -13,7 +13,18 @@ function LiveTranslator({ tweaks, setTweak }) {
     return p;
   }, [palette, tweaks.primary, tweaks.primaryInk]);
 
-  const [convo, setConvo] = React.useState([]);
+  const DRAFT_KEY = 'ct_draft_convo_v1';
+  const [convo, setConvo] = React.useState(() => {
+    // Restore an in-progress (unsaved) conversation if the app was reopened.
+    try {
+      const raw = localStorage.getItem(DRAFT_KEY);
+      if (raw) {
+        const arr = JSON.parse(raw);
+        if (Array.isArray(arr) && arr.length) return arr;
+      }
+    } catch (e) {}
+    return [];
+  });
   const [appMode, setAppMode] = React.useState('practice'); // 'practice' | 'live'
   const [searchOpen, setSearchOpen] = React.useState(false);
   const [langPicker, setLangPicker] = React.useState(null);  // 'target' | 'native' | null
@@ -22,6 +33,7 @@ function LiveTranslator({ tweaks, setTweak }) {
   const [saveAuto, setSaveAuto] = React.useState(false); // did the save sheet auto-open?
   const [pendingNew, setPendingNew] = React.useState(false); // save sheet opened via "새 대화"
   const [viewSession, setViewSession] = React.useState(null); // saved session opened read-only
+  const [wordPop, setWordPop] = React.useState(null); // { term, translation, loading, x, y } | null
   const promptedRef = React.useRef(false);   // only auto-prompt once per conversation
   const idleRef = React.useRef(null);
 
@@ -35,6 +47,15 @@ function LiveTranslator({ tweaks, setTweak }) {
 
   React.useEffect(() => {
     if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+  }, [convo]);
+
+  // Auto-backup the in-progress conversation so an accidental app switch /
+  // reload doesn't lose it. Cleared on explicit save or "새 대화".
+  React.useEffect(() => {
+    try {
+      if (convo.length) localStorage.setItem(DRAFT_KEY, JSON.stringify(convo));
+      else localStorage.removeItem(DRAFT_KEY);
+    } catch (e) {}
   }, [convo]);
 
   // Auto "end of conversation" detection:
@@ -58,6 +79,7 @@ function LiveTranslator({ tweaks, setTweak }) {
   function startNewConversation() {
     setConvo([]);
     promptedRef.current = false;
+    try { localStorage.removeItem(DRAFT_KEY); } catch (e) {}
   }
 
   // Bottom bar: "대화 저장" — open the save sheet manually (only when there's
@@ -84,6 +106,46 @@ function LiveTranslator({ tweaks, setTweak }) {
     const h = d.getHours();
     const m = String(d.getMinutes()).padStart(2, '0');
     return (h < 12 ? '오전 ' : '오후 ') + ((h % 12) || 12) + ':' + m;
+  }
+
+  // Tap a word in any bubble → ask the AI whether the tapped word is part of a
+  // phrase/idiom (translate the whole phrase) or standalone (just the word),
+  // then translate it into the OTHER conversation language. Shows a popup.
+  function handleWordTap(word, fullSentence, sentenceLang, ev) {
+    try { ev && ev.stopPropagation(); } catch (e) {}
+    const rect = (ev && ev.currentTarget && ev.currentTarget.getBoundingClientRect)
+      ? ev.currentTarget.getBoundingClientRect() : null;
+    const anchor = rect ? { x: rect.left + rect.width / 2, y: rect.top } : { x: 0, y: 0 };
+
+    const targetName = window.CT_LANG.byCode(target).native;
+    const nativeName = window.CT_LANG.byCode(native).native;
+    const fromName = sentenceLang === 'target' ? targetName : nativeName;
+    const toName   = sentenceLang === 'target' ? nativeName : targetName;
+
+    setWordPop({ term: word, translation: '', loading: true, x: anchor.x, y: anchor.y });
+
+    (async () => {
+      try {
+        const res = await window.CT_API.complete(
+          `In the ${fromName} sentence below, the user tapped the word "${word}". ` +
+          `If that word is part of a meaningful phrase, idiom, or multi-word expression, ` +
+          `select the WHOLE phrase; otherwise just the single word. ` +
+          `Then translate the selected text into natural ${toName}.\n` +
+          `Return strict one-line JSON: {"selected":"<the word or phrase in ${fromName}>","translation":"<${toName} translation>"}\n\n` +
+          `Sentence: ${fullSentence}`
+        );
+        const raw = String(res).trim().replace(/^```json\s*/i,'').replace(/```\s*$/,'');
+        let p = null;
+        try { p = JSON.parse(raw); } catch (e) {}
+        if (p && p.translation) {
+          setWordPop(wp => wp ? { ...wp, term: p.selected || word, translation: p.translation, loading: false } : null);
+        } else {
+          setWordPop(wp => wp ? { ...wp, translation: raw || '(번역 실패)', loading: false } : null);
+        }
+      } catch (e) {
+        setWordPop(wp => wp ? { ...wp, translation: '(번역을 가져오지 못했어요)', loading: false } : null);
+      }
+    })();
   }
 
   // Pick (or re-pick) a suggestion attached to a "them" message.
@@ -246,6 +308,7 @@ function LiveTranslator({ tweaks, setTweak }) {
     : '0 4px 12px rgba(0,0,0,0.1)';
 
   return (
+   <WordTapCtx.Provider value={handleWordTap}>
     <div style={{
       width: '100%', height: '100%',
       display: 'flex', flexDirection: 'column',
@@ -398,6 +461,9 @@ function LiveTranslator({ tweaks, setTweak }) {
         />
       )}
     </div>
+
+    <WordPopup pop={wordPop} palette={c} onClose={() => setWordPop(null)} />
+   </WordTapCtx.Provider>
   );
 }
 
@@ -428,7 +494,7 @@ function MyBubbleStyled({ msg, palette, radius, shadow, fontScale }) {
           boxShadow: shadow,
         }}>
           <div style={{ fontSize: 15 * fontScale, lineHeight: 1.45, fontWeight: 600 }}>
-            {msg.trans}
+            <TappableText text={msg.trans} lang="target" />
           </div>
           <div style={{ marginTop: 6, display: 'flex', justifyContent: 'flex-end' }}>
             <window.ListenButtons text={msg.trans} palette={c} accent="me" />
@@ -447,10 +513,10 @@ function MyBubbleStyled({ msg, palette, radius, shadow, fontScale }) {
             </svg>
             <div style={{ flex: 1, minWidth: 0 }}>
               <div style={{ fontSize: 9 * fontScale, color: isFixed ? '#9B59E0' : c.ink3, fontWeight: 700, letterSpacing: 0.4, textTransform: 'uppercase', marginBottom: 1, display: 'inline-flex', alignItems: 'center', gap: 3 }}>
-                {isFixed ? '정정됨 · 나만 보임' : '나만 보임'}
+                {isFixed ? '정정됨 · 내 입력' : '내 입력'}
               </div>
               <div style={isFixed ? { textDecoration: 'line-through wavy #9B59E055', textDecorationSkipInk: 'none' } : null}>
-                {msg.orig}
+                <TappableText text={msg.orig} lang="native" />
               </div>
             </div>
           </div>
@@ -489,7 +555,7 @@ function TheirBubbleStyled({ msg, palette, dark, children, radius, shadow, fontS
           borderRadius: `4px ${radius}px ${radius}px ${radius}px`,
           boxShadow: shadow,
         }}>
-          <div style={{ fontSize: 15 * fontScale, lineHeight: 1.5, color: c.themInk || c.ink, fontWeight: 500 }}>{msg.orig}</div>
+          <div style={{ fontSize: 15 * fontScale, lineHeight: 1.5, color: c.themInk || c.ink, fontWeight: 500 }}><TappableText text={msg.orig} lang="target" /></div>
           <div style={{ marginTop: 6 }}>
             <window.ListenButtons text={msg.orig} palette={c} accent="them" />
           </div>
@@ -509,10 +575,10 @@ function TheirBubbleStyled({ msg, palette, dark, children, radius, shadow, fontS
                 <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
                   <rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/>
                 </svg>
-                나만 보임
+                번역
               </span>
             </div>
-            {msg.trans}
+            <TappableText text={msg.trans} lang="native" />
           </div>
         </div>
         <div style={{ fontSize: 10 * fontScale, color: c.ink3, marginTop: 4, marginLeft: 4 }}>{msg.time}</div>
@@ -526,6 +592,68 @@ function TheirBubbleStyled({ msg, palette, dark, children, radius, shadow, fontS
 // progress. Two clear actions: save this conversation, or start a new one.
 // Read-only viewer for a saved conversation. Reuses the same bubble styles as
 // the live chat so it looks identical — just no input and no suggestions.
+// Context to pass the word-tap handler down to bubbles without prop drilling.
+const WordTapCtx = React.createContext(null);
+window.CT_WordTapCtx = WordTapCtx;
+
+// Renders text where each word is tappable; separators preserved.
+function TappableText({ text, lang }) {
+  const onTap = React.useContext(WordTapCtx);
+  if (text == null) return null;
+  const str = String(text);
+  if (!onTap) return <span>{str}</span>;
+  const tokens = str.split(/(\s+)/);
+  return (
+    <span>
+      {tokens.map((tok, i) => {
+        if (tok === '' || /^\s+$/.test(tok)) return <span key={i}>{tok}</span>;
+        const core = tok.replace(/^[^\p{L}\p{N}]+|[^\p{L}\p{N}]+$/gu, '');
+        if (!core) return <span key={i}>{tok}</span>;
+        return (
+          <span key={i}
+            onClick={(e) => onTap(core, str, lang, e)}
+            style={{ cursor: 'pointer', borderRadius: 3 }}
+          >{tok}</span>
+        );
+      })}
+    </span>
+  );
+}
+
+// Popup showing a tapped word/phrase + its translation + listen button.
+function WordPopup({ pop, palette, onClose }) {
+  const c = palette;
+  if (!pop) return null;
+  return (
+    <div onClick={onClose} style={{
+      position: 'fixed', inset: 0, zIndex: 300,
+      background: 'rgba(0,18,38,0.18)',
+      display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24,
+    }}>
+      <div onClick={e => e.stopPropagation()} style={{
+        background: c.surface, borderRadius: 18, padding: '18px 20px',
+        maxWidth: 320, width: '100%',
+        boxShadow: '0 16px 40px rgba(0,18,38,0.28)', border: `1px solid ${c.divider}`,
+      }}>
+        <div style={{ fontSize: 10, fontWeight: 800, letterSpacing: 0.6, textTransform: 'uppercase', color: c.ink3, marginBottom: 6 }}>단어·구 번역</div>
+        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 10 }}>
+          <div style={{ fontSize: 19, fontWeight: 700, color: c.ink, lineHeight: 1.3, flex: 1 }}>{pop.term}</div>
+          <button onClick={() => window.CT_SPEAK && window.CT_SPEAK.once(pop.term)} style={{
+            flexShrink: 0, width: 34, height: 34, borderRadius: 999, border: 'none', cursor: 'pointer',
+            background: c.primarySoft, color: c.primary, display: 'flex', alignItems: 'center', justifyContent: 'center',
+          }} title="듣기" aria-label="듣기">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 5L6 9H2v6h4l5 4V5z"/><path d="M15.5 8.5a4 4 0 0 1 0 7"/><path d="M19 5a8 8 0 0 1 0 14"/></svg>
+          </button>
+        </div>
+        <div style={{ marginTop: 10, paddingTop: 10, borderTop: `1px dashed ${c.divider}`, fontSize: 16, color: c.primary, fontWeight: 600, lineHeight: 1.45, minHeight: 22 }}>
+          {pop.loading ? <span style={{ color: c.ink3, fontWeight: 500 }}>번역 중…</span> : pop.translation}
+        </div>
+        <button onClick={onClose} style={{ marginTop: 14, width: '100%', height: 40, borderRadius: 999, border: 'none', cursor: 'pointer', background: c.primary, color: c.primaryInk, fontSize: 13, fontWeight: 800 }}>닫기</button>
+      </div>
+    </div>
+  );
+}
+
 function SavedConvoViewer({ palette, dark, session, radius, shadow, fontScale, native, onClose }) {
   const c = palette;
   const scrollRef = window.useDragScroll();
@@ -914,4 +1042,4 @@ INPUT: ${text}`
   );
 }
 
-Object.assign(window, { LiveTranslator });
+Object.assign(window, { LiveTranslator, TappableText });

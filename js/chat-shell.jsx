@@ -248,7 +248,7 @@ function MyBubble({ msg, palette }) {
             </svg>
             <div style={{ flex: 1, minWidth: 0 }}>
               <div style={{ fontSize: 9, color: isFixed ? '#9B59E0' : c.ink3, fontWeight: 700, letterSpacing: 0.4, textTransform: 'uppercase', marginBottom: 1 }}>
-                {isFixed ? '내가 말한 원본 · 정정됨 · 나만 보임' : '내가 입력한 원문 · 나만 보임'}
+                {isFixed ? '내가 말한 원본 · 정정됨 · 내 입력' : '내가 입력한 원문 · 내 입력'}
               </div>
               <div style={isFixed ? { textDecoration: 'line-through wavy #9B59E055', textDecorationSkipInk: 'none' } : null}>
                 {msg.orig}
@@ -311,7 +311,7 @@ function TheirBubble({ msg, palette, dark, children, native = 'KO' }) {
                 <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
                   <rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/>
                 </svg>
-                나만 보임
+                번역
               </span>
             </div>
             {msg.trans}
