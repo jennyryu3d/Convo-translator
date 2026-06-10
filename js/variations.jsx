@@ -130,6 +130,7 @@ function SuggNumberedStack({ palette, suggestions, dark, max = 3, onPick }) {
 // ═══════════════════════════════════════════════════════════════════════
 function SuggCardDeck({ palette, suggestions, dark, max = 3, onPick, pickedIdx = null, locked = false }) {
   const c = palette;
+  const TT = window.TappableText || (({ text }) => <span>{text}</span>);
   const list = suggestions.slice(0, max);
   // Start the carousel on the picked card if there is one.
   const [idx, setIdx] = React.useState(typeof pickedIdx === 'number' ? pickedIdx : 0);
@@ -193,13 +194,13 @@ function SuggCardDeck({ palette, suggestions, dark, max = 3, onPick, pickedIdx =
           <div style={{
             fontSize: 17, color: cardInk, fontWeight: 700, lineHeight: 1.4,
             letterSpacing: '-0.2px', marginBottom: 8,
-          }}>{s.en}</div>
+          }}><TT text={s.en} lang="target" id={`sugg-en-${idx}`} /></div>
           <div style={{
             fontSize: 13, color: cardInk, opacity: 0.95, lineHeight: 1.45,
             paddingTop: 8, borderTop: `1px dashed ${cardInk}55`,
             display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 8,
           }}>
-            <span style={{ flex: 1 }}>{s.ko}</span>
+            <span style={{ flex: 1 }}><TT text={s.ko} lang="native" id={`sugg-ko-${idx}`} /></span>
             {/* Speaker button — plays the target-language (en) sentence */}
             <button onClick={(e) => { e.stopPropagation(); window.CT_SPEAK && window.CT_SPEAK.once(s.en); }} style={{
               flexShrink: 0, width: 30, height: 30, borderRadius: 999, border: 'none', cursor: 'pointer',

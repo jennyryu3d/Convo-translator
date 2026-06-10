@@ -96,9 +96,10 @@ function LiveTranslator({ tweaks, setTweak }) {
   // reset.
   function handleNewConversation() {
     if (!convo.length) { startNewConversation(); return; }
-    setSaveAuto(false);
-    setPendingNew(true);
-    setSaveOpen(true);
+    // Just clear — no save sheet (the bookmark button handles saving).
+    // A light confirm prevents accidental loss of an unsaved conversation.
+    const ok = window.confirm('현재 대화를 지우고 새로 시작할까요?');
+    if (ok) startNewConversation();
   }
 
   function nowStamp() {
@@ -111,18 +112,18 @@ function LiveTranslator({ tweaks, setTweak }) {
   // Tap a word in any bubble → ask the AI whether the tapped word is part of a
   // phrase/idiom (translate the whole phrase) or standalone (just the word),
   // then translate it into the OTHER conversation language. Shows a popup.
-  function handleWordTap(word, fullSentence, sentenceLang, ev) {
+  function handleWordTap(word, fullSentence, sentenceLang, ev, tapId) {
     try { ev && ev.stopPropagation(); } catch (e) {}
-    const rect = (ev && ev.currentTarget && ev.currentTarget.getBoundingClientRect)
-      ? ev.currentTarget.getBoundingClientRect() : null;
-    const anchor = rect ? { x: rect.left + rect.width / 2, y: rect.top } : { x: 0, y: 0 };
 
     const targetName = window.CT_LANG.byCode(target).native;
     const nativeName = window.CT_LANG.byCode(native).native;
     const fromName = sentenceLang === 'target' ? targetName : nativeName;
     const toName   = sentenceLang === 'target' ? nativeName : targetName;
 
-    setWordPop({ term: word, translation: '', loading: true, x: anchor.x, y: anchor.y });
+    // term = text to pronounce (the source word/phrase). translation = result.
+    // hlSentence + hlSelected drive the in-text highlight. tapId identifies the
+    // exact text element clicked so only that one highlights.
+    setWordPop({ term: word, translation: '', loading: true, hlSentence: fullSentence, hlSelected: word, tapId: tapId || null });
 
     (async () => {
       try {
@@ -138,7 +139,7 @@ function LiveTranslator({ tweaks, setTweak }) {
         let p = null;
         try { p = JSON.parse(raw); } catch (e) {}
         if (p && p.translation) {
-          setWordPop(wp => wp ? { ...wp, term: p.selected || word, translation: p.translation, loading: false } : null);
+          setWordPop(wp => wp ? { ...wp, term: p.selected || word, translation: p.translation, hlSelected: p.selected || word, loading: false } : null);
         } else {
           setWordPop(wp => wp ? { ...wp, translation: raw || '(번역 실패)', loading: false } : null);
         }
@@ -308,7 +309,7 @@ function LiveTranslator({ tweaks, setTweak }) {
     : '0 4px 12px rgba(0,0,0,0.1)';
 
   return (
-   <WordTapCtx.Provider value={handleWordTap}>
+   <WordTapCtx.Provider value={{ onTap: handleWordTap, highlight: wordPop ? { sentence: wordPop.hlSentence, selected: wordPop.hlSelected, tapId: wordPop.tapId } : null }}>
     <div style={{
       width: '100%', height: '100%',
       display: 'flex', flexDirection: 'column',
@@ -494,7 +495,7 @@ function MyBubbleStyled({ msg, palette, radius, shadow, fontScale }) {
           boxShadow: shadow,
         }}>
           <div style={{ fontSize: 15 * fontScale, lineHeight: 1.45, fontWeight: 600 }}>
-            <TappableText text={msg.trans} lang="target" />
+            <TappableText text={msg.trans} lang="target" id={`me-${msg.id}-t`} />
           </div>
           <div style={{ marginTop: 6, display: 'flex', justifyContent: 'flex-end' }}>
             <window.ListenButtons text={msg.trans} palette={c} accent="me" />
@@ -516,7 +517,7 @@ function MyBubbleStyled({ msg, palette, radius, shadow, fontScale }) {
                 {isFixed ? '정정됨 · 내 입력' : '내 입력'}
               </div>
               <div style={isFixed ? { textDecoration: 'line-through wavy #9B59E055', textDecorationSkipInk: 'none' } : null}>
-                <TappableText text={msg.orig} lang="native" />
+                <TappableText text={msg.orig} lang="native" id={`me-${msg.id}-o`} />
               </div>
             </div>
           </div>
@@ -555,7 +556,7 @@ function TheirBubbleStyled({ msg, palette, dark, children, radius, shadow, fontS
           borderRadius: `4px ${radius}px ${radius}px ${radius}px`,
           boxShadow: shadow,
         }}>
-          <div style={{ fontSize: 15 * fontScale, lineHeight: 1.5, color: c.themInk || c.ink, fontWeight: 500 }}><TappableText text={msg.orig} lang="target" /></div>
+          <div style={{ fontSize: 15 * fontScale, lineHeight: 1.5, color: c.themInk || c.ink, fontWeight: 500 }}><TappableText text={msg.orig} lang="target" id={`them-${msg.id}-o`} /></div>
           <div style={{ marginTop: 6 }}>
             <window.ListenButtons text={msg.orig} palette={c} accent="them" />
           </div>
@@ -578,7 +579,7 @@ function TheirBubbleStyled({ msg, palette, dark, children, radius, shadow, fontS
                 번역
               </span>
             </div>
-            <TappableText text={msg.trans} lang="native" />
+            <TappableText text={msg.trans} lang="native" id={`them-${msg.id}-t`} />
           </div>
         </div>
         <div style={{ fontSize: 10 * fontScale, color: c.ink3, marginTop: 4, marginLeft: 4 }}>{msg.time}</div>
@@ -597,22 +598,47 @@ const WordTapCtx = React.createContext(null);
 window.CT_WordTapCtx = WordTapCtx;
 
 // Renders text where each word is tappable; separators preserved.
-function TappableText({ text, lang }) {
-  const onTap = React.useContext(WordTapCtx);
+// When this instance is the one the user tapped, the selected word/phrase is
+// highlighted. `id` uniquely identifies this text element.
+let __ttSeq = 0;
+function TappableText({ text, lang, id }) {
+  const ctx = React.useContext(WordTapCtx);
+  const selfId = React.useMemo(() => id || ('tt-' + (++__ttSeq)), [id]);
   if (text == null) return null;
   const str = String(text);
-  if (!onTap) return <span>{str}</span>;
+  if (!ctx || !ctx.onTap) return <span>{str}</span>;
+  const onTap = ctx.onTap;
+  const hl = ctx.highlight;
+
+  // Build a set of character ranges to highlight (only if this element was tapped).
+  let hlRange = null;
+  if (hl && hl.tapId === selfId && hl.selected) {
+    const lc = str.toLowerCase();
+    const sel = String(hl.selected).toLowerCase().trim();
+    const at = sel ? lc.indexOf(sel) : -1;
+    if (at >= 0) hlRange = [at, at + sel.length];
+  }
+
   const tokens = str.split(/(\s+)/);
+  let cursor = 0;
   return (
     <span>
       {tokens.map((tok, i) => {
+        const start = cursor; cursor += tok.length;
         if (tok === '' || /^\s+$/.test(tok)) return <span key={i}>{tok}</span>;
         const core = tok.replace(/^[^\p{L}\p{N}]+|[^\p{L}\p{N}]+$/gu, '');
         if (!core) return <span key={i}>{tok}</span>;
+        const inHL = hlRange && start < hlRange[1] && (start + tok.length) > hlRange[0];
         return (
           <span key={i}
-            onClick={(e) => onTap(core, str, lang, e)}
-            style={{ cursor: 'pointer', borderRadius: 3 }}
+            onClick={(e) => onTap(core, str, lang, e, selfId)}
+            style={{
+              cursor: 'pointer', borderRadius: 3,
+              background: inHL ? '#FFE26A' : 'transparent',
+              color: inHL ? '#3A2E00' : 'inherit',
+              padding: inHL ? '0 1px' : 0,
+              transition: 'background .1s',
+            }}
           >{tok}</span>
         );
       })}
@@ -620,35 +646,42 @@ function TappableText({ text, lang }) {
   );
 }
 
-// Popup showing a tapped word/phrase + its translation + listen button.
+// Compact popup: translation + listen + close. No repeated source word (it's
+// highlighted in the text instead). Tap anywhere outside to dismiss.
 function WordPopup({ pop, palette, onClose }) {
   const c = palette;
   if (!pop) return null;
   return (
     <div onClick={onClose} style={{
       position: 'fixed', inset: 0, zIndex: 300,
-      background: 'rgba(0,18,38,0.18)',
+      background: 'rgba(0,18,38,0.12)',
       display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24,
     }}>
       <div onClick={e => e.stopPropagation()} style={{
-        background: c.surface, borderRadius: 18, padding: '18px 20px',
-        maxWidth: 320, width: '100%',
-        boxShadow: '0 16px 40px rgba(0,18,38,0.28)', border: `1px solid ${c.divider}`,
+        background: c.surface, borderRadius: 14, padding: '10px 12px 12px',
+        maxWidth: 260, minWidth: 180,
+        boxShadow: '0 10px 30px rgba(0,18,38,0.28)', border: `1px solid ${c.divider}`,
+        display: 'flex', flexDirection: 'column', gap: 8,
       }}>
-        <div style={{ fontSize: 10, fontWeight: 800, letterSpacing: 0.6, textTransform: 'uppercase', color: c.ink3, marginBottom: 6 }}>단어·구 번역</div>
-        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 10 }}>
-          <div style={{ fontSize: 19, fontWeight: 700, color: c.ink, lineHeight: 1.3, flex: 1 }}>{pop.term}</div>
-          <button onClick={() => window.CT_SPEAK && window.CT_SPEAK.once(pop.term)} style={{
-            flexShrink: 0, width: 34, height: 34, borderRadius: 999, border: 'none', cursor: 'pointer',
-            background: c.primarySoft, color: c.primary, display: 'flex', alignItems: 'center', justifyContent: 'center',
-          }} title="듣기" aria-label="듣기">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 5L6 9H2v6h4l5 4V5z"/><path d="M15.5 8.5a4 4 0 0 1 0 7"/><path d="M19 5a8 8 0 0 1 0 14"/></svg>
+        <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: -4 }}>
+          <button onClick={onClose} style={{
+            width: 24, height: 24, borderRadius: 999, border: 'none', cursor: 'pointer',
+            background: 'transparent', color: c.ink3, display: 'flex', alignItems: 'center', justifyContent: 'center',
+          }} aria-label="닫기">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
           </button>
         </div>
-        <div style={{ marginTop: 10, paddingTop: 10, borderTop: `1px dashed ${c.divider}`, fontSize: 16, color: c.primary, fontWeight: 600, lineHeight: 1.45, minHeight: 22 }}>
-          {pop.loading ? <span style={{ color: c.ink3, fontWeight: 500 }}>번역 중…</span> : pop.translation}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <div style={{ flex: 1, fontSize: 15, color: c.primary, fontWeight: 700, lineHeight: 1.4 }}>
+            {pop.loading ? <span style={{ color: c.ink3, fontWeight: 500 }}>번역 중…</span> : pop.translation}
+          </div>
+          <button onClick={() => window.CT_SPEAK && window.CT_SPEAK.once(pop.term)} style={{
+            flexShrink: 0, width: 30, height: 30, borderRadius: 999, border: 'none', cursor: 'pointer',
+            background: c.primarySoft, color: c.primary, display: 'flex', alignItems: 'center', justifyContent: 'center',
+          }} title="듣기" aria-label="듣기">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 5L6 9H2v6h4l5 4V5z"/><path d="M15.5 8.5a4 4 0 0 1 0 7"/><path d="M19 5a8 8 0 0 1 0 14"/></svg>
+          </button>
         </div>
-        <button onClick={onClose} style={{ marginTop: 14, width: '100%', height: 40, borderRadius: 999, border: 'none', cursor: 'pointer', background: c.primary, color: c.primaryInk, fontSize: 13, fontWeight: 800 }}>닫기</button>
       </div>
     </div>
   );
