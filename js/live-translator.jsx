@@ -6,8 +6,15 @@ function LiveTranslator({ tweaks, setTweak }) {
   const mode = dark ? 'dark' : 'light';
   const basePalette = window.CT_BRAND[mode];
 
-  // Selected color skin (blue | gold | rose). Persisted so it survives reloads.
-  const skinId = tweaks.skin || (function(){ try { return localStorage.getItem('ct_skin') || 'blue'; } catch(e){ return 'blue'; } })();
+  // Selected color skin (blue | gold | rose). localStorage takes priority so a
+  // user's saved choice survives reloads; falls back to tweaks default, then blue.
+  const skinId = (function(){
+    try {
+      const saved = localStorage.getItem('ct_skin');
+      if (saved && window.CT_SKINS && window.CT_SKINS[saved]) return saved;
+    } catch (e) {}
+    return tweaks.skin || 'blue';
+  })();
 
   // Apply skin tokens on top of the base palette for this light/dark mode.
   const palette = React.useMemo(() => {
@@ -34,6 +41,9 @@ function LiveTranslator({ tweaks, setTweak }) {
   function setSkin(id) {
     try { localStorage.setItem('ct_skin', id); } catch (e) {}
     if (setTweak) setTweak('skin', id);
+    const nm = (window.CT_SKINS && window.CT_SKINS[id] && window.CT_SKINS[id].name) || '';
+    setSkinToast(`${nm} 테마로 변경됐어요 · 앞으로 이 색상이 유지돼요`);
+    setTimeout(() => setSkinToast(null), 2600);
   }
   const [convo, setConvo] = React.useState(() => {
     // Restore an in-progress (unsaved) conversation if the app was reopened.
@@ -48,6 +58,7 @@ function LiveTranslator({ tweaks, setTweak }) {
   });
   const [appMode, setAppMode] = React.useState('practice'); // 'practice' | 'live'
   const [pendingMode, setPendingMode] = React.useState(null); // mode-switch confirm
+  const [skinToast, setSkinToast] = React.useState(null); // brief "applied" message
   const [searchOpen, setSearchOpen] = React.useState(false);
   const [langPicker, setLangPicker] = React.useState(null);  // 'target' | 'native' | null
   const [settingsOpen, setSettingsOpen] = React.useState(false);
@@ -506,6 +517,18 @@ function LiveTranslator({ tweaks, setTweak }) {
         onCancel={() => setPendingMode(null)}
       />
     )}
+    {skinToast && (
+      <div style={{
+        position: 'fixed', left: '50%', bottom: 90, transform: 'translateX(-50%)',
+        zIndex: 330, maxWidth: '88%',
+        background: c.ai, color: c.aiInk || '#fff',
+        padding: '10px 16px', borderRadius: 999,
+        fontSize: 12.5, fontWeight: 700, lineHeight: 1.3, textAlign: 'center',
+        boxShadow: '0 8px 24px rgba(0,18,38,0.3)',
+        animation: 'svvIn .2s ease-out',
+      }}>{skinToast}</div>
+    )}
+
    </WordTapCtx.Provider>
   );
 }
