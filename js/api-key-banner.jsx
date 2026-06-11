@@ -1,10 +1,11 @@
-// API key entry banner — shows when running outside the design environment
-// and no key is stored yet. User can dismiss; reopens automatically on first
-// translation attempt if still missing.
+// API key entry banner. Translation goes through the serverless proxy by
+// default, so this stays hidden in normal use. It only opens when the proxy
+// is unreachable/rate-limited (a `ct-api-key-needed` event) or when the user
+// opens it from settings to add a personal fallback key.
 
 function ApiKeyBanner() {
   const [hasKey, setHasKey] = React.useState(!!window.CT_API.getKey());
-  const [open, setOpen] = React.useState(window.CT_API.needsKey() && !window.CT_API.getKey());
+  const [open, setOpen] = React.useState(false);
   const [val, setVal] = React.useState('');
 
   React.useEffect(() => {
