@@ -105,18 +105,21 @@ function TopBar({ palette, dark, onToggleDark, showMascot = true, onSearch, onSe
 }
 
 function LangSlot({ c, role, lang, label, sub, onClick }) {
+  const bg = c.langBtnBg ? c.langBtnBg : 'linear-gradient(180deg, #1E4D74 0%, #143A5C 100%)';
+  const border = c.langBtnBg ? c.langBtnBg : '#0E2F4D';
   return (
     <button onClick={onClick} style={{
       flex: 1, display: 'flex', alignItems: 'center', gap: 10,
-      background: 'linear-gradient(180deg, #1E4D74 0%, #143A5C 100%)',
+      background: bg,
       borderRadius: 14, padding: '9px 12px 9px 10px',
-      border: `1px solid #0E2F4D`,
+      border: `1px solid ${border}`,
       boxShadow: '0 2px 6px rgba(0,40,84,0.25)',
       cursor: 'pointer', textAlign: 'left',
       transition: 'all 140ms cubic-bezier(0.22, 0.61, 0.36, 1)',
       fontFamily: 'inherit',
     }}>
-      <window.LangChip code={lang.code} size={34} />
+      <window.LangChip code={lang.code} size={34}
+        overrideBg={c.langChipBg || null} overrideFg={c.langChipFg || null} />
       <div style={{ flex: 1, minWidth: 0 }}>
         <div style={{
           fontSize: 10, fontWeight: 600, color: 'rgba(255,255,255,0.6)', letterSpacing: '0.1em',

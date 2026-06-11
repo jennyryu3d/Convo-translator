@@ -18,6 +18,16 @@ function LiveTranslator({ tweaks, setTweak }) {
   // so the skin stays coherent (buttons + cards matched).
   const c = palette;
 
+  // Switching practice/live with an in-progress conversation: ask keep/clear.
+  function handleModeChange(nextMode) {
+    if (nextMode === appMode) return;
+    if (convo.length > 0) {
+      setPendingMode(nextMode);   // opens the confirm popup
+      return;
+    }
+    setAppMode(nextMode);
+  }
+
   const DRAFT_KEY = 'ct_draft_convo_v1';
 
   // Change color skin: persist + update tweaks so it applies immediately.
@@ -37,6 +47,7 @@ function LiveTranslator({ tweaks, setTweak }) {
     return [];
   });
   const [appMode, setAppMode] = React.useState('practice'); // 'practice' | 'live'
+  const [pendingMode, setPendingMode] = React.useState(null); // mode-switch confirm
   const [searchOpen, setSearchOpen] = React.useState(false);
   const [langPicker, setLangPicker] = React.useState(null);  // 'target' | 'native' | null
   const [settingsOpen, setSettingsOpen] = React.useState(false);
@@ -418,7 +429,7 @@ function LiveTranslator({ tweaks, setTweak }) {
       </div>
 
       <LiveInput palette={c} dark={dark} fontScale={fontScale}
-        appMode={appMode} onModeChange={setAppMode}
+        appMode={appMode} onModeChange={handleModeChange}
         onSendMine={sendMine} onSendThem={sendThem}
         target={target} native={native} />
 
@@ -485,6 +496,16 @@ function LiveTranslator({ tweaks, setTweak }) {
     </div>
 
     <WordPopup pop={wordPop} palette={c} onClose={() => setWordPop(null)} />
+
+    {pendingMode && (
+      <ModeSwitchConfirm
+        palette={c}
+        toMode={pendingMode}
+        onKeep={() => { setAppMode(pendingMode); setPendingMode(null); }}
+        onClear={() => { startNewConversation(); setAppMode(pendingMode); setPendingMode(null); }}
+        onCancel={() => setPendingMode(null)}
+      />
+    )}
    </WordTapCtx.Provider>
   );
 }
@@ -664,6 +685,47 @@ function TappableText({ text, lang, id }) {
         );
       })}
     </span>
+  );
+}
+
+// Confirm dialog when switching modes with an in-progress conversation.
+function ModeSwitchConfirm({ palette, toMode, onKeep, onClear, onCancel }) {
+  const c = palette;
+  const toName = toMode === 'live' ? '실시간 대화' : '학습 모드';
+  return (
+    <div onClick={onCancel} style={{
+      position: 'fixed', inset: 0, zIndex: 320,
+      background: 'rgba(0,18,38,0.45)', backdropFilter: 'blur(2px)',
+      display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24,
+    }}>
+      <div onClick={e => e.stopPropagation()} style={{
+        background: c.surface, borderRadius: 20, padding: '20px 20px 16px',
+        maxWidth: 340, width: '100%',
+        boxShadow: '0 20px 48px rgba(0,18,38,0.3)',
+      }}>
+        <div style={{ fontSize: 16, fontWeight: 800, color: c.ink, marginBottom: 6, fontFamily: "'Chakra Petch', system-ui, sans-serif" }}>
+          {toName}(으)로 전환할까요?
+        </div>
+        <div style={{ fontSize: 13, color: c.ink2, lineHeight: 1.55, marginBottom: 18 }}>
+          진행 중인 대화가 있어요. 대화를 유지한 채 전환하거나, 지우고 새로 시작할 수 있어요.
+        </div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+          <button onClick={onKeep} style={{
+            height: 44, borderRadius: 999, border: 'none', cursor: 'pointer',
+            background: c.primary, color: c.primaryInk, fontSize: 14, fontWeight: 800,
+          }}>대화 유지하고 전환</button>
+          <button onClick={onClear} style={{
+            height: 44, borderRadius: 999, cursor: 'pointer',
+            background: 'transparent', color: '#C0392B', border: `1.5px solid ${c.divider}`,
+            fontSize: 14, fontWeight: 800,
+          }}>대화 지우고 전환</button>
+          <button onClick={onCancel} style={{
+            height: 40, borderRadius: 999, border: 'none', cursor: 'pointer',
+            background: 'transparent', color: c.ink3, fontSize: 13, fontWeight: 700,
+          }}>취소</button>
+        </div>
+      </div>
+    </div>
   );
 }
 
@@ -1007,10 +1069,10 @@ INPUT: ${text}`
             <button onClick={() => liveListen('me')} disabled={recSide === 'them' || busy} style={{
               flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4,
               padding: '12px 8px', borderRadius: 16, border: 'none', cursor: 'pointer',
-              background: recSide === 'me' ? '#b84a3a' : c.primary, color: '#fff',
+              background: recSide === 'me' ? '#b84a3a' : (c.meBtn || c.primary), color: (c.meBtnInk || '#fff'),
               opacity: recSide === 'them' ? 0.4 : 1,
               animation: recSide === 'me' ? 'micPulse 1.1s infinite' : 'none',
-              boxShadow: `0 3px 10px ${c.primary}44`,
+              boxShadow: `0 3px 10px ${(c.meBtn || c.primary)}44`,
             }}>
               <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="9" y="3" width="6" height="12" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg>
               <span style={{ fontSize: 13, fontWeight: 800 }}>{recSide === 'me' ? '듣는 중 · 탭하면 완료' : '내가 말하기'}</span>
@@ -1019,10 +1081,10 @@ INPUT: ${text}`
             <button onClick={() => liveListen('them')} disabled={recSide === 'me' || busy} style={{
               flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4,
               padding: '12px 8px', borderRadius: 16, border: 'none', cursor: 'pointer',
-              background: recSide === 'them' ? '#b84a3a' : c.accent2, color: '#fff',
+              background: recSide === 'them' ? '#b84a3a' : (c.themBtn || c.accent2), color: (c.themBtnInk || '#fff'),
               opacity: recSide === 'me' ? 0.4 : 1,
               animation: recSide === 'them' ? 'micPulse 1.1s infinite' : 'none',
-              boxShadow: `0 3px 10px ${c.accent2}44`,
+              boxShadow: `0 3px 10px ${(c.themBtn || c.accent2)}44`,
             }}>
               <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M6 8a6 6 0 0 1 12 0c0 4-3 5-3 8a3 3 0 0 1-6 0 3 3 0 0 1 3-3"/></svg>
               <span style={{ fontSize: 13, fontWeight: 800 }}>{recSide === 'them' ? '듣는 중 · 탭하면 완료' : '상대방 말하기'}</span>
@@ -1078,8 +1140,8 @@ INPUT: ${text}`
             <div style={{ marginTop: 8, display: 'flex', alignItems: 'center', gap: 8 }}>
               <button onClick={practiceMic} style={{
                 width: 38, height: 38, borderRadius: 999, border: 'none',
-                background: recSide === 'me' ? '#b84a3a' : c.primarySoft,
-                color: recSide === 'me' ? '#fff' : c.primary, cursor: 'pointer', flexShrink: 0,
+                background: recSide === 'me' ? '#b84a3a' : (c.micBtn || c.primary),
+                color: recSide === 'me' ? '#fff' : (c.micBtnInk || '#fff'), cursor: 'pointer', flexShrink: 0,
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
                 animation: recSide === 'me' ? 'micPulse 1.1s infinite' : 'none',
               }} title={`${nativeLang.name} 음성 입력`}>
@@ -1088,8 +1150,8 @@ INPUT: ${text}`
               <button onClick={handleSend} disabled={!preview} style={{
                 flex: 1, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 5,
                 height: 38, borderRadius: 999, border: 'none',
-                background: preview ? c.primary : c.divider,
-                color: preview ? c.primaryInk : c.ink3,
+                background: preview ? (c.sendBtn || c.primary) : c.divider,
+                color: preview ? (c.sendBtnInk || c.primaryInk) : c.ink3,
                 fontSize: 13, fontWeight: 800, cursor: preview ? 'pointer' : 'default',
               }}>
                 {targetLang.name}로 보내기 {I.send}
