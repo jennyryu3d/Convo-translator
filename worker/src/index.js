@@ -129,8 +129,12 @@ export default {
       const data = await res.json();
       if (!res.ok) {
         const msg = data?.error?.message || `Upstream HTTP ${res.status}`;
-        // Don't leak upstream internals; return a generic-ish error.
-        return json({ error: msg }, res.status === 429 ? 429 : 502, origin);
+        // Surface the upstream status + error type so failures are diagnosable.
+        return json({
+          error: msg,
+          upstreamStatus: res.status,
+          upstreamType: data?.error?.type || null,
+        }, res.status === 429 ? 429 : 502, origin);
       }
 
       const text = (data.content || []).find((b) => b.type === 'text')?.text || '';
