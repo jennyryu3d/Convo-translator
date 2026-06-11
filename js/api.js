@@ -38,6 +38,7 @@ window.CT_API = (function () {
     } catch (e) {
       const err = new Error('PROXY_UNREACHABLE');
       err.canFallback = true;
+      err.reason = 'down';      // network/connection problem
       throw err;
     }
     let data = {};
@@ -48,6 +49,7 @@ window.CT_API = (function () {
       if (res.status === 429 || res.status >= 500) {
         const err = new Error(msg);
         err.canFallback = true;
+        err.reason = res.status === 429 ? 'busy' : 'down';
         throw err;
       }
       // Bad request / blocked origin etc. — a real error, no fallback.
@@ -94,7 +96,11 @@ window.CT_API = (function () {
       //    if they've entered one; otherwise prompt for it.
       const key = getKey();
       if (key) return callAnthropic(key, prompt);
-      window.dispatchEvent(new CustomEvent('ct-api-key-needed'));
+      // No key: don't force key entry. Surface a friendly notice (with an
+      // optional "use my own key" path) by tagging the reason.
+      window.dispatchEvent(new CustomEvent('ct-api-key-needed', {
+        detail: { reason: err.reason || 'down' },
+      }));
       throw new Error('API_KEY_NEEDED');
     }
   }

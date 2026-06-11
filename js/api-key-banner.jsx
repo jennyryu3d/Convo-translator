@@ -6,10 +6,19 @@
 function ApiKeyBanner() {
   const [hasKey, setHasKey] = React.useState(!!window.CT_API.getKey());
   const [open, setOpen] = React.useState(false);
+  // reason: 'busy' (rate limited) | 'down' (proxy error) | 'manual' (settings)
+  const [reason, setReason] = React.useState('manual');
+  // In an auto-triggered notice we hide the key input until the user opts in.
+  const [showKeyInput, setShowKeyInput] = React.useState(false);
   const [val, setVal] = React.useState('');
 
   React.useEffect(() => {
-    function onNeed() { setOpen(true); }
+    function onNeed(e) {
+      const r = (e && e.detail && e.detail.reason) || 'manual';
+      setReason(r);
+      setShowKeyInput(r === 'manual'); // settings → straight to key input
+      setOpen(true);
+    }
     function onSet()  { setHasKey(!!window.CT_API.getKey()); }
     window.addEventListener('ct-api-key-needed', onNeed);
     window.addEventListener('ct-api-key-set', onSet);
@@ -34,6 +43,26 @@ function ApiKeyBanner() {
     setOpen(false);
   }
 
+  // Headline + body depend on why the sheet opened.
+  const NOTICE = {
+    busy: {
+      tag: '잠시만요',
+      title: '지금 사용량이 많아요',
+      body: '요청이 한꺼번에 몰렸어요. 잠시 후 다시 시도해 주세요. 바로 계속하고 싶다면 본인 API 키를 쓸 수도 있어요.',
+    },
+    down: {
+      tag: '연결 문제',
+      title: '잠시 연결이 원활하지 않아요',
+      body: '번역 서버에 일시적으로 연결하지 못했어요. 잠시 후 다시 시도해 주세요. 바로 계속하고 싶다면 본인 API 키를 쓸 수도 있어요.',
+    },
+    manual: {
+      tag: 'API 키 설정',
+      title: '내 Anthropic API 키 쓰기',
+      body: '평소엔 키 없이 번역돼요. 사용량이 몰릴 때를 대비해 본인 키를 넣어두면, 막히지 않고 본인 키로 번역됩니다. 키는 이 기기에만 저장돼요.',
+    },
+  };
+  const notice = NOTICE[reason] || NOTICE.manual;
+
   return (
     <div style={{
       position: 'fixed', inset: 0, zIndex: 200,
@@ -51,14 +80,30 @@ function ApiKeyBanner() {
           fontFamily: "'Chakra Petch', system-ui, sans-serif",
           fontSize: 11, fontWeight: 600, letterSpacing: '0.12em',
           textTransform: 'uppercase', color: '#487762', marginBottom: 4,
-        }}>API 키 설정</div>
+        }}>{notice.tag}</div>
         <div style={{ fontSize: 20, fontWeight: 700, color: '#081B1B', marginBottom: 8, fontFamily: "'Chakra Petch', system-ui, sans-serif" }}>
-          Anthropic API 키가 필요해요
+          {notice.title}
         </div>
         <div style={{ fontSize: 13, color: '#444e4b', lineHeight: 1.55, marginBottom: 14 }}>
-          이 페이지는 번역에 Claude API를 씁니다.
-          본인의 키를 입력하면 <b>이 기기에만 저장</b>되고 다른 곳으로 전송되지 않아요.
+          {notice.body}
         </div>
+
+        {/* Auto-notice (busy/down): offer the key path as an option, not a demand. */}
+        {!showKeyInput ? (
+          <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+            <button onClick={() => setOpen(false)} style={{
+              padding: '10px 20px', borderRadius: 999, border: 'none', cursor: 'pointer',
+              background: '#96CDB0', color: '#081B1B', fontSize: 13, fontWeight: 700,
+              fontFamily: 'inherit',
+            }}>확인</button>
+            <button onClick={() => setShowKeyInput(true)} style={{
+              padding: '10px 16px', borderRadius: 999, border: 'none', cursor: 'pointer',
+              background: 'transparent', color: '#487762', fontSize: 13, fontWeight: 600,
+              fontFamily: 'inherit', textDecoration: 'underline',
+            }}>내 API 키 쓰기</button>
+          </div>
+        ) : (
+        <React.Fragment>
         <a href="https://console.anthropic.com/settings/keys" target="_blank" rel="noreferrer" style={{
           display: 'inline-block', fontSize: 12, color: '#487762', textDecoration: 'underline',
           marginBottom: 14,
@@ -92,6 +137,8 @@ function ApiKeyBanner() {
         <div style={{ fontSize: 11, color: '#8d9a96', marginTop: 14, lineHeight: 1.5 }}>
           🔒 키는 브라우저 localStorage에만 저장돼요. 공용 PC면 사용 후 설정에서 제거하세요.
         </div>
+        </React.Fragment>
+        )}
       </div>
     </div>
   );
