@@ -1,0 +1,18 @@
+# Cloudflare Worker config (used only if you deploy via the wrangler CLI).
+# If you deploy through the Cloudflare dashboard instead, you don't need this
+# file — see worker/README.md for the click-by-click dashboard steps.
+
+name = "convotrans-proxy"
+main = "src/index.js"
+compatibility_date = "2024-11-01"
+
+# ANTHROPIC_API_KEY is NOT set here — it's a secret. Set it with:
+#   wrangler secret put ANTHROPIC_API_KEY
+# (or in the dashboard: Settings → Variables and Secrets → add a Secret)
+
+# RATE_LIMIT_KV is added in step 3. After creating the namespace:
+#   wrangler kv namespace create RATE_LIMIT_KV
+# uncomment and paste the id below:
+# [[kv_namespaces]]
+# binding = "RATE_LIMIT_KV"
+# id = "<your-kv-namespace-id>"

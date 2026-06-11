@@ -58,7 +58,7 @@ function SettingsSheet({ palette, dark, onClose, target, native, skinId = 'blue'
           <Row c={c} label="대화 언어" value={`${tgt.name} (${tgt.code})`} />
           <Row c={c} label="내 모국어" value={`${nat.name} (${nat.code})`} />
           <Row c={c} label="음성 인식" value={sttOK ? '지원됨' : '미지원 브라우저'} ok={sttOK} />
-          <Row c={c} label="API 연결" value={window.CT_API.needsKey() ? (window.CT_API.getKey() ? '연결됨 (내 키)' : '키 필요') : '디자인 환경'} ok={!window.CT_API.needsKey() || !!window.CT_API.getKey()} last />
+          <Row c={c} label="API 연결" value={!window.CT_API.needsKey() ? '디자인 환경' : (window.CT_API.getKey() ? '연결됨 (내 키)' : '서버 연결됨')} ok last />
         </div>
 
         {/* Color skin picker */}
