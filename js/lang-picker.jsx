@@ -58,7 +58,7 @@ function LangPickerModal({ palette, dark, role, current, onPick, onClose }) {
                 color: c.ink, cursor: 'pointer', textAlign: 'left',
                 fontFamily: 'inherit',
               }}>
-                <window.LangChip code={l.code} size={36} />
+                <window.LangChip code={l.code} size={36} overrideBg={c.primarySoft} overrideFg={c.primary} />
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ fontSize: 14, fontWeight: 600, color: c.ink, lineHeight: 1.25 }}>
                     {l.name}
