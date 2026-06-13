@@ -490,6 +490,7 @@ function LiveTranslator({ tweaks, setTweak }) {
         <window.SaveConvoSheet
           palette={c} dark={dark}
           convo={convo} target={target} native={native}
+          mode={appMode}
           autoOpened={saveAuto}
           pendingNew={pendingNew}
           onSaved={() => { setSaveOpen(false); setSaveAuto(false); setPendingNew(false); startNewConversation(); }}

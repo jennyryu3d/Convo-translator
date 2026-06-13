@@ -28,7 +28,7 @@ function todayLabel() {
   return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
 }
 
-function SaveConvoSheet({ palette, dark, convo, target, native, onSaved, onDelete, onDismiss, onSnooze, autoOpened, pendingNew }) {
+function SaveConvoSheet({ palette, dark, convo, target, native, mode = 'practice', onSaved, onDelete, onDismiss, onSnooze, autoOpened, pendingNew }) {
   const c = palette;
   const nativeLang = window.CT_LANG.byCode(native);
   const [title, setTitle] = React.useState('');
@@ -83,6 +83,7 @@ function SaveConvoSheet({ palette, dark, convo, target, native, onSaved, onDelet
       topic: summary.trim().slice(0, 60) || '저장된 대화',
       date: todayLabel(),
       label: '저장됨',
+      mode: mode === 'live' ? 'live' : 'practice',  // which screen produced it
       // Flatten: for each "them" message, keep it; if I picked one of its
       // suggestions, append my chosen reply as a "me" message so the saved
       // transcript reads as a real back-and-forth.

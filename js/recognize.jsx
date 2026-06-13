@@ -43,33 +43,32 @@ window.CT_RECOGNIZE = {
     const rec = new SR();
     rec.lang = locale || 'en-US';
     rec.interimResults = true;
-    rec.continuous = !!opts.continuous;
+    // IMPORTANT: keep the engine in single-utterance mode. Continuous mode on
+    // many mobile engines (Samsung/Chrome Android) re-fires a growing buffer and
+    // produces massively duplicated text ("we we went we went to ..."). We
+    // emulate hands-free listening by restarting after each utterance instead.
+    rec.continuous = false;
     rec.maxAlternatives = 1;
 
-    let finalText = '';   // committed text from prior (restarted) sessions + this session's finals
-    let committed = '';   // finalized text carried across continuous auto-restarts
+    const handsFree = !!opts.continuous; // keep listening through pauses until stop()
+    let committed = '';    // finalized utterances so far (joined across restarts)
+    let sessionFinal = ''; // final transcript of the CURRENT utterance only
     let stopped = false;
 
-    // Rebuild the transcript from the FULL results list each event (instead of
-    // appending per fired result). Continuous recognition can re-fire the same
-    // segment, and appending duplicated words; rebuilding from index 0 avoids
-    // that. `committed` preserves text across auto-restarts.
+    const full = (extra) => [committed, extra].filter(Boolean).join(' ').replace(/\s+/g, ' ').trim();
+
+    // Rebuild this utterance's transcript from the full results list each event
+    // (never append per-event), so a single utterance can't duplicate itself.
     rec.onresult = (e) => {
-      let cur = '';
-      let interim = '';
+      let fin = '', interim = '';
       for (let i = 0; i < e.results.length; i++) {
         const tr = e.results[i][0].transcript;
-        if (e.results[i].isFinal) cur += tr;
+        if (e.results[i].isFinal) fin += tr;
         else interim += tr;
       }
-      const base = committed ? committed + ' ' : '';
-      if (cur) {
-        finalText = (base + cur).trim();
-        opts.onFinal && opts.onFinal(finalText);
-      }
-      if (interim) {
-        opts.onInterim && opts.onInterim((base + interim).trim());
-      }
+      sessionFinal = fin.trim();
+      if (sessionFinal) opts.onFinal && opts.onFinal(full(sessionFinal));
+      if (interim) opts.onInterim && opts.onInterim(full(interim));
     };
 
     rec.onerror = (e) => {
@@ -80,22 +79,22 @@ window.CT_RECOGNIZE = {
     };
 
     rec.onend = () => {
-      // In continuous mode, keep listening through pauses: snapshot what's been
-      // finalized so far, then restart a fresh session (whose results start
-      // empty) — base + new results stays duplicate-free.
-      if (!stopped && opts.continuous) {
-        committed = finalText;
+      // Hands-free: each utterance ends here (after a pause). Commit it ONCE,
+      // then restart to keep listening — duplicate-free across pauses.
+      if (!stopped && handsFree) {
+        if (sessionFinal) committed = full(sessionFinal);
+        sessionFinal = '';
         try { rec.start(); return; } catch (err) {}
       }
-      opts.onEnd && opts.onEnd(finalText);
+      opts.onEnd && opts.onEnd(full(sessionFinal));
     };
 
     return {
       raw: rec,
-      start() { stopped = false; finalText = ''; committed = ''; try { rec.start(); } catch (e) {} },
+      start() { stopped = false; committed = ''; sessionFinal = ''; try { rec.start(); } catch (e) {} },
       stop()  { stopped = true; try { rec.stop(); } catch (e) {} },
       abort() { stopped = true; try { rec.abort(); } catch (e) {} },
-      getFinal() { return finalText; },
+      getFinal() { return full(sessionFinal); },
     };
   },
 

@@ -1,9 +1,9 @@
 // App version + settings sheet (bottom-sheet) showing version info.
 window.CT_VERSION = {
-  number: '1.3.1',
-  build: '2026.06.13b',
+  number: '1.3.2',
+  build: '2026.06.13c',
   label: 'Beta',
-  notes: '홈에 새로고침 버튼 · 음성 단어 반복 버그 수정 · 제안 카드 단어 탭 번역 복원(+좌우 스와이프) · 검색 아이콘 정리(저장 페이지로 통합) · UI는 한국어 고정',
+  notes: '음성 인식 중복/오작성 수정(발화 단위 재시작) · 저장 대화에 실시간/학습 모드 아이콘 구분 · 홈 새로고침 버튼 · 단어 탭 번역 + 좌우 스와이프',
 };
 
 function SettingsSheet({ palette, dark, onClose, target, native, skinId = 'blue', onPickSkin }) {
