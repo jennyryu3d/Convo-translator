@@ -268,6 +268,28 @@ function NoSavedYet({ c }) {
   );
 }
 
+// Left avatar that signals which screen produced the saved conversation:
+// live (실시간) = cyan waveform, learn/practice (학습) = primary pencil.
+// Older saves with no `mode` fall back to the partner initial.
+function ModeAvatar({ c, mode, fallback }) {
+  const base = { width: 38, height: 38, borderRadius: 12, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' };
+  if (mode === 'live') return (
+    <div style={{ ...base, background: c.accent2 + '22', color: c.accent2 }} title="실시간 대화">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M2 12h3l2.5-7 4 14 2.5-7H22"/></svg>
+    </div>
+  );
+  if (mode === 'practice') return (
+    <div style={{ ...base, background: c.primarySoft, color: c.primary }} title="학습 모드">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5z"/></svg>
+    </div>
+  );
+  return (
+    <div style={{ ...base, background: c.primarySoft, color: c.primary, fontSize: 14, fontWeight: 800 }}>
+      {String(fallback || '?').charAt(0).toUpperCase()}
+    </div>
+  );
+}
+
 function RecentList({ c, sessions, onPickSession, heading = '최근 대화', showTips = true, onDelete }) {
   return (
     <>
@@ -286,12 +308,7 @@ function RecentList({ c, sessions, onPickSession, heading = '최근 대화', sho
                 background: 'transparent', color: 'inherit', fontFamily: 'inherit', padding: 0,
                 display: 'flex', alignItems: 'center', gap: 12,
               }}>
-                <div style={{
-                  width: 38, height: 38, borderRadius: 12, flexShrink: 0,
-                  background: c.primarySoft, color: c.primary,
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  fontSize: 14, fontWeight: 800,
-                }}>{(s.partner || '?').charAt(0).toUpperCase()}</div>
+                <ModeAvatar c={c} mode={s.mode} fallback={s.partner} />
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 8 }}>
                     <div style={{ fontSize: 13, fontWeight: 700, color: c.ink, lineHeight: 1.3, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
