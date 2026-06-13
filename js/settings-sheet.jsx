@@ -1,9 +1,9 @@
 // App version + settings sheet (bottom-sheet) showing version info.
 window.CT_VERSION = {
-  number: '1.3.0',
-  build: '2026.06.13',
+  number: '1.3.1',
+  build: '2026.06.13b',
   label: 'Beta',
-  notes: '서버 프록시로 키 없이 사용 · 저장 대화 한 곳에서 검색·기간 필터·삭제 · 설정에 앱 주소 표시 · 언어 칩 색상 스킨 적용',
+  notes: '홈에 새로고침 버튼 · 음성 단어 반복 버그 수정 · 제안 카드 단어 탭 번역 복원(+좌우 스와이프) · 검색 아이콘 정리(저장 페이지로 통합) · UI는 한국어 고정',
 };
 
 function SettingsSheet({ palette, dark, onClose, target, native, skinId = 'blue', onPickSkin }) {

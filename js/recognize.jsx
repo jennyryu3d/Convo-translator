@@ -46,25 +46,29 @@ window.CT_RECOGNIZE = {
     rec.continuous = !!opts.continuous;
     rec.maxAlternatives = 1;
 
-    let finalText = '';
+    let finalText = '';   // committed text from prior (restarted) sessions + this session's finals
+    let committed = '';   // finalized text carried across continuous auto-restarts
     let stopped = false;
-    let gotResult = false;
 
+    // Rebuild the transcript from the FULL results list each event (instead of
+    // appending per fired result). Continuous recognition can re-fire the same
+    // segment, and appending duplicated words; rebuilding from index 0 avoids
+    // that. `committed` preserves text across auto-restarts.
     rec.onresult = (e) => {
-      gotResult = true;
+      let cur = '';
       let interim = '';
-      let freshFinal = '';
-      for (let i = e.resultIndex; i < e.results.length; i++) {
+      for (let i = 0; i < e.results.length; i++) {
         const tr = e.results[i][0].transcript;
-        if (e.results[i].isFinal) freshFinal += tr;
+        if (e.results[i].isFinal) cur += tr;
         else interim += tr;
       }
-      if (freshFinal) {
-        finalText = (finalText + ' ' + freshFinal).trim();
+      const base = committed ? committed + ' ' : '';
+      if (cur) {
+        finalText = (base + cur).trim();
         opts.onFinal && opts.onFinal(finalText);
       }
       if (interim) {
-        opts.onInterim && opts.onInterim(interim);
+        opts.onInterim && opts.onInterim((base + interim).trim());
       }
     };
 
@@ -76,10 +80,11 @@ window.CT_RECOGNIZE = {
     };
 
     rec.onend = () => {
-      // Only auto-restart in explicit hands-free (continuous) mode. The old
-      // "restart whenever nothing was heard" loop hit Android's rate limit and
-      // killed recognition after a couple turns — so we end cleanly instead.
+      // In continuous mode, keep listening through pauses: snapshot what's been
+      // finalized so far, then restart a fresh session (whose results start
+      // empty) — base + new results stays duplicate-free.
       if (!stopped && opts.continuous) {
+        committed = finalText;
         try { rec.start(); return; } catch (err) {}
       }
       opts.onEnd && opts.onEnd(finalText);
@@ -87,7 +92,7 @@ window.CT_RECOGNIZE = {
 
     return {
       raw: rec,
-      start() { stopped = false; finalText = ''; gotResult = false; try { rec.start(); } catch (e) {} },
+      start() { stopped = false; finalText = ''; committed = ''; try { rec.start(); } catch (e) {} },
       stop()  { stopped = true; try { rec.stop(); } catch (e) {} },
       abort() { stopped = true; try { rec.abort(); } catch (e) {} },
       getFinal() { return finalText; },

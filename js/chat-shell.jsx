@@ -72,9 +72,9 @@ function TopBar({ palette, dark, onToggleDark, showMascot = true, onSearch, onSe
           </div>
         </div>
         <div style={{ display: 'flex', gap: 4 }}>
-          <HeaderIcon onClick={onSearch} ariaLabel="search">
+          <HeaderIcon onClick={() => window.location.reload()} ariaLabel="refresh">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/>
+              <path d="M21 12a9 9 0 1 1-2.64-6.36"/><path d="M21 3v6h-6"/>
             </svg>
           </HeaderIcon>
           <HeaderIcon onClick={onToggleDark} ariaLabel="theme">{dark ? window.CT_ICONS.sun : window.CT_ICONS.moon}</HeaderIcon>
@@ -83,20 +83,20 @@ function TopBar({ palette, dark, onToggleDark, showMascot = true, onSearch, onSe
         </div>
       </div>
 
-      {/* Two language slots — labelled in the user's own (native) language */}
+      {/* Two language slots — Korean labels (Korean-first app) */}
       <div style={{ display: 'flex', gap: 8 }}>
         <LangSlot
           c={c}
           role="target"
           lang={tgt}
-          label={window.CT_T ? window.CT_T(native, 'yourLanguage') : '상대방 언어'}
+          label="상대방 언어"
           onClick={() => onPickTarget?.()}
         />
         <LangSlot
           c={c}
           role="native"
           lang={nat}
-          label={window.CT_T ? window.CT_T(native, 'myLanguage') : '내 언어'}
+          label="내 언어"
           onClick={() => onPickNative?.()}
         />
       </div>
