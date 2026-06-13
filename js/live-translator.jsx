@@ -60,6 +60,7 @@ function LiveTranslator({ tweaks, setTweak }) {
   const [pendingMode, setPendingMode] = React.useState(null); // mode-switch confirm
   const [skinToast, setSkinToast] = React.useState(null); // brief "applied" message
   const [searchOpen, setSearchOpen] = React.useState(false);
+  const [searchMode, setSearchMode] = React.useState('search'); // 'search' | 'history'
   const [langPicker, setLangPicker] = React.useState(null);  // 'target' | 'native' | null
   const [settingsOpen, setSettingsOpen] = React.useState(false);
   const [saveOpen, setSaveOpen] = React.useState(false);
@@ -360,8 +361,8 @@ function LiveTranslator({ tweaks, setTweak }) {
     }}>
       <TopBar palette={c} dark={dark} showMascot={tweaks.showMascot}
         onToggleDark={() => setTweak('theme', dark ? 'light' : 'dark')}
-        onSearch={() => setSearchOpen(true)}
-        onHistory={() => setSearchOpen(true)}
+        onSearch={() => { setSearchMode('search'); setSearchOpen(true); }}
+        onHistory={() => { setSearchMode('history'); setSearchOpen(true); }}
         onSettings={() => setSettingsOpen(true)}
         onSaveConvo={() => { if (convo.length) { setSaveAuto(false); setSaveOpen(true); } }}
         target={target} native={native}
@@ -448,6 +449,7 @@ function LiveTranslator({ tweaks, setTweak }) {
         <window.SearchOverlay
           palette={c}
           dark={dark}
+          mode={searchMode}
           onClose={() => setSearchOpen(false)}
           onJump={() => setSearchOpen(false)}
           onOpenSession={(sess) => { setViewSession(sess); setSearchOpen(false); }}

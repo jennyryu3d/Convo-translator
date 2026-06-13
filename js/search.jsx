@@ -2,32 +2,73 @@
 // both original text and translations. Results group by session/date,
 // highlight matched terms, and tap to jump to that message in the chat.
 
-function SearchOverlay({ palette, dark, onClose, embedded = false, onJump, onOpenSession, initialEmpty = false }) {
+function SearchOverlay({ palette, dark, onClose, embedded = false, onJump, onOpenSession, initialEmpty = false, mode = 'search' }) {
   const c = palette;
   const I = window.CT_ICONS;
+  // Unified "saved conversations" page: one place to browse, search, filter by
+  // date, and delete. (Both the top-bar search and history buttons open this.)
+  const isHistory = true;
   const [q, setQ] = React.useState('');
   const [filter, setFilter] = React.useState('all');  // all | mine | them
+  const [dateFrom, setDateFrom] = React.useState('');
+  const [dateTo, setDateTo] = React.useState('');
+  const [savedVersion, setSavedVersion] = React.useState(0); // bump to re-read saved list after delete
   const inputRef = React.useRef(null);
   const bodyRef = window.useDragScroll();
 
   React.useEffect(() => {
-    if (!embedded) setTimeout(() => inputRef.current?.focus(), 60);
-  }, [embedded]);
+    // History mode opens to browse, not type — don't steal focus into the box.
+    if (!embedded && !isHistory) setTimeout(() => inputRef.current?.focus(), 60);
+  }, [embedded, isHistory]);
+
+  React.useEffect(() => {
+    function onChange() { setSavedVersion(v => v + 1); }
+    window.addEventListener('ct-saved-changed', onChange);
+    return () => window.removeEventListener('ct-saved-changed', onChange);
+  }, []);
+
+  // Keep only dates inside the chosen [from, to] window. Non-YYYY-MM-DD dates
+  // are excluded when a window is active.
+  const hasDateFilter = !!(dateFrom || dateTo);
+  function inRange(dateStr) {
+    if (!hasDateFilter) return true;
+    const d = String(dateStr || '').slice(0, 10);
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(d)) return false;
+    if (dateFrom && d < dateFrom) return false;
+    if (dateTo && d > dateTo) return false;
+    return true;
+  }
+
+  function deleteSaved(s) {
+    if (!String(s.id).startsWith('saved-')) return;
+    if (window.confirm('이 대화를 삭제할까요? 되돌릴 수 없어요.')) {
+      window.CT_SAVED.remove(s.id);  // dispatches ct-saved-changed → re-render
+    }
+  }
 
   // Group results by session for nicer presentation
   const grouped = React.useMemo(() => {
     const raw = window.CT_searchAll(q);
-    const f = raw.filter(r => filter === 'all' || r.msg.side === (filter === 'mine' ? 'me' : 'them'));
+    const f = raw.filter(r =>
+      (filter === 'all' || r.msg.side === (filter === 'mine' ? 'me' : 'them')) &&
+      inRange(r.session.date)
+    );
     const byId = new Map();
     for (const r of f) {
       if (!byId.has(r.session.id)) byId.set(r.session.id, { session: r.session, hits: [] });
       byId.get(r.session.id).hits.push(r);
     }
     return [...byId.values()];
-  }, [q, filter]);
+  }, [q, filter, dateFrom, dateTo]);
 
   const totalHits = grouped.reduce((n, g) => n + g.hits.length, 0);
-  const recent = [...((window.CT_SAVED && window.CT_SAVED.all()) || []), ...window.CT_HISTORY].slice(0, 6);
+
+  // List shown when there's no query. History mode lists all saved (so you can
+  // manage/delete them); search mode shows a short recents preview.
+  const allSaved = (window.CT_SAVED && window.CT_SAVED.all()) || [];
+  const recentSource = isHistory ? allSaved : [...allSaved, ...window.CT_HISTORY];
+  const recentFiltered = recentSource.filter(s => inRange(s.date));
+  const recent = isHistory ? recentFiltered : recentFiltered.slice(0, 6);
 
   return (
     <div style={{
@@ -41,9 +82,31 @@ function SearchOverlay({ palette, dark, onClose, embedded = false, onJump, onOpe
         mark.ct-mark { background: ${c.primary}33; color: ${c.primary}; padding: 1px 3px; border-radius: 3px; font-weight: 700; }
       `}</style>
 
+      {/* Title strip — tells you which page you're on (history vs search) */}
+      <div style={{
+        flexShrink: 0, padding: '12px 14px 2px',
+        background: c.surface,
+        display: 'flex', alignItems: 'center', gap: 8,
+      }}>
+        <span style={{
+          width: 26, height: 26, borderRadius: 8, flexShrink: 0,
+          background: c.primarySoft, color: c.primary,
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+        }}>
+          {isHistory ? (
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>
+          ) : (
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+          )}
+        </span>
+        <div style={{ fontSize: 15, fontWeight: 800, color: c.ink, fontFamily: "'Chakra Petch', system-ui, sans-serif" }}>
+          {isHistory ? '저장된 대화' : '대화 검색'}
+        </div>
+      </div>
+
       {/* Search bar */}
       <div style={{
-        flexShrink: 0, padding: '12px 12px 10px',
+        flexShrink: 0, padding: '8px 12px 10px',
         background: c.surface, borderBottom: `1px solid ${c.divider}`,
         display: 'flex', alignItems: 'center', gap: 8,
       }}>
@@ -84,6 +147,44 @@ function SearchOverlay({ palette, dark, onClose, embedded = false, onJump, onOpe
         </div>
       </div>
 
+      {/* Date range filter — find conversations saved within a period */}
+      <div style={{
+        flexShrink: 0, padding: '8px 12px',
+        background: c.surface, borderBottom: `1px solid ${c.divider}`,
+        display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap',
+      }}>
+        <span style={{ fontSize: 11, fontWeight: 800, color: c.ink3, letterSpacing: 0.4 }}>기간</span>
+        <input
+          type="date"
+          value={dateFrom}
+          max={dateTo || undefined}
+          onChange={e => setDateFrom(e.target.value)}
+          style={{
+            border: `1.5px solid ${dateFrom ? c.primary : c.divider}`, borderRadius: 10,
+            padding: '5px 8px', fontSize: 12, color: c.ink, background: c.bg,
+            outline: 'none', fontFamily: 'inherit',
+          }}
+        />
+        <span style={{ color: c.ink3, fontSize: 12 }}>~</span>
+        <input
+          type="date"
+          value={dateTo}
+          min={dateFrom || undefined}
+          onChange={e => setDateTo(e.target.value)}
+          style={{
+            border: `1.5px solid ${dateTo ? c.primary : c.divider}`, borderRadius: 10,
+            padding: '5px 8px', fontSize: 12, color: c.ink, background: c.bg,
+            outline: 'none', fontFamily: 'inherit',
+          }}
+        />
+        {hasDateFilter && (
+          <button onClick={() => { setDateFrom(''); setDateTo(''); }} style={{
+            border: 'none', cursor: 'pointer', background: c.divider, color: c.ink2,
+            borderRadius: 999, padding: '4px 10px', fontSize: 11, fontWeight: 700,
+          }}>기간 해제</button>
+        )}
+      </div>
+
       {/* Filter tabs */}
       {q && (
         <div style={{
@@ -105,8 +206,14 @@ function SearchOverlay({ palette, dark, onClose, embedded = false, onJump, onOpe
       {/* Body */}
       <div ref={bodyRef} style={{ flex: 1, minHeight: 0, overflowY: 'auto', padding: '12px 12px 20px' }}>
         {!q && (recent.length > 0
-          ? <RecentList c={c} sessions={recent} onPickSession={s => onOpenSession ? onOpenSession(s) : setQ((s.topic || s.partner || '').split(' ')[0])} />
-          : <NoSavedYet c={c} />
+          ? <RecentList c={c} sessions={recent}
+              heading={isHistory ? '저장된 대화' : '최근 대화'}
+              showTips={!isHistory}
+              onDelete={deleteSaved}
+              onPickSession={s => onOpenSession ? onOpenSession(s) : setQ((s.topic || s.partner || '').split(' ')[0])} />
+          : (hasDateFilter
+              ? <EmptyResults c={c} q={dateFrom || dateTo ? '해당 기간' : ''} />
+              : <NoSavedYet c={c} />)
         )}
         {q && grouped.length === 0 && <EmptyResults c={c} q={q} />}
         {q && grouped.map(g => (
@@ -161,47 +268,68 @@ function NoSavedYet({ c }) {
   );
 }
 
-function RecentList({ c, sessions, onPickSession }) {
+function RecentList({ c, sessions, onPickSession, heading = '최근 대화', showTips = true, onDelete }) {
   return (
     <>
-      <SectionHeader c={c} label="최근 대화" />
+      <SectionHeader c={c} label={heading} />
       <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-        {sessions.map(s => (
-          <button key={s.id} onClick={() => onPickSession?.(s)} style={{
-            textAlign: 'left', cursor: 'pointer', border: 'none',
-            background: c.surface, borderRadius: 14, padding: '12px 14px',
-            display: 'flex', alignItems: 'center', gap: 12,
-            boxShadow: `0 1px 3px rgba(0,0,0,0.05), 0 0 0 1px ${c.divider}`,
-          }}>
-            <div style={{
-              width: 38, height: 38, borderRadius: 12, flexShrink: 0,
-              background: c.primarySoft, color: c.primary,
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              fontSize: 14, fontWeight: 800,
-            }}>{s.partner.charAt(0).toUpperCase()}</div>
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 8 }}>
-                <div style={{ fontSize: 13, fontWeight: 700, color: c.ink, lineHeight: 1.3, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                  {s.partner}
+        {sessions.map(s => {
+          const canDelete = onDelete && String(s.id).startsWith('saved-');
+          return (
+            <div key={s.id} style={{
+              background: c.surface, borderRadius: 14, padding: '12px 14px',
+              display: 'flex', alignItems: 'center', gap: 10,
+              boxShadow: `0 1px 3px rgba(0,0,0,0.05), 0 0 0 1px ${c.divider}`,
+            }}>
+              <button onClick={() => onPickSession?.(s)} style={{
+                flex: 1, minWidth: 0, textAlign: 'left', cursor: 'pointer', border: 'none',
+                background: 'transparent', color: 'inherit', fontFamily: 'inherit', padding: 0,
+                display: 'flex', alignItems: 'center', gap: 12,
+              }}>
+                <div style={{
+                  width: 38, height: 38, borderRadius: 12, flexShrink: 0,
+                  background: c.primarySoft, color: c.primary,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  fontSize: 14, fontWeight: 800,
+                }}>{(s.partner || '?').charAt(0).toUpperCase()}</div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 8 }}>
+                    <div style={{ fontSize: 13, fontWeight: 700, color: c.ink, lineHeight: 1.3, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                      {s.partner}
+                    </div>
+                    <div style={{ fontSize: 10, color: c.ink3, flexShrink: 0 }}>{s.date || s.label}</div>
+                  </div>
+                  <div style={{ fontSize: 11, color: c.ink2, marginTop: 2, lineHeight: 1.4, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                    {s.topic}
+                  </div>
                 </div>
-                <div style={{ fontSize: 10, color: c.ink3, flexShrink: 0 }}>{s.label}</div>
-              </div>
-              <div style={{ fontSize: 11, color: c.ink2, marginTop: 2, lineHeight: 1.4, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                {s.topic}
-              </div>
+              </button>
+              {canDelete && (
+                <button onClick={() => onDelete(s)} title="삭제" style={{
+                  width: 32, height: 32, borderRadius: 999, flexShrink: 0, border: 'none',
+                  background: 'transparent', color: '#C0392B', cursor: 'pointer',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                }}>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
+                </button>
+              )}
             </div>
-          </button>
-        ))}
+          );
+        })}
       </div>
-      <SectionHeader c={c} label="검색 팁" mt={20} />
-      <div style={{
-        background: c.surface, borderRadius: 12, padding: '12px 14px',
-        border: `1px dashed ${c.divider}`,
-        fontSize: 12, color: c.ink2, lineHeight: 1.7,
-      }}>
-        한글 또는 영어로 자유롭게 검색하세요.<br />
-        제목·요약·대화 내용 모두 검색돼요.
-      </div>
+      {showTips && (
+        <>
+          <SectionHeader c={c} label="검색 팁" mt={20} />
+          <div style={{
+            background: c.surface, borderRadius: 12, padding: '12px 14px',
+            border: `1px dashed ${c.divider}`,
+            fontSize: 12, color: c.ink2, lineHeight: 1.7,
+          }}>
+            한글 또는 영어로 자유롭게 검색하세요.<br />
+            제목·요약·대화 내용 모두 검색돼요.
+          </div>
+        </>
+      )}
     </>
   );
 }

@@ -48,8 +48,9 @@ function LangPickerModal({ palette, dark, role, current, onPick, onClose }) {
           maxHeight: 360, overflowY: 'auto',
           display: 'flex', flexDirection: 'column',
         }}>
-          {langs.map(l => {
+          {langs.map((l, idx) => {
             const on = l.code === current;
+            const shade = window.CT_chipShade ? window.CT_chipShade(c, idx, langs.length) : { bg: c.primarySoft, fg: c.primary };
             return (
               <button key={l.code} onClick={() => { onPick(l.code); onClose(); }} style={{
                 display: 'flex', alignItems: 'center', gap: 12,
@@ -58,7 +59,7 @@ function LangPickerModal({ palette, dark, role, current, onPick, onClose }) {
                 color: c.ink, cursor: 'pointer', textAlign: 'left',
                 fontFamily: 'inherit',
               }}>
-                <window.LangChip code={l.code} size={36} />
+                <window.LangChip code={l.code} size={36} overrideBg={shade.bg} overrideFg={shade.fg} />
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ fontSize: 14, fontWeight: 600, color: c.ink, lineHeight: 1.25 }}>
                     {l.name}

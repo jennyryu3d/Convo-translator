@@ -1,9 +1,9 @@
 // App version + settings sheet (bottom-sheet) showing version info.
 window.CT_VERSION = {
-  number: '1.2.0',
-  build: '2026.06.10',
+  number: '1.3.0',
+  build: '2026.06.13',
   label: 'Beta',
-  notes: '제안 카드 누적·음성출력·선택 교체 · 단어/구 탭 번역 · 대화 자동 임시저장 · 저장 대화 다시보기 · 색상 스킨(블루·골드·로즈) · 플로팅 새대화/저장 버튼',
+  notes: '서버 프록시로 키 없이 사용 · 저장 대화 한 곳에서 검색·기간 필터·삭제 · 설정에 앱 주소 표시 · 언어 칩 색상 스킨 적용',
 };
 
 function SettingsSheet({ palette, dark, onClose, target, native, skinId = 'blue', onPickSkin }) {
@@ -58,7 +58,16 @@ function SettingsSheet({ palette, dark, onClose, target, native, skinId = 'blue'
           <Row c={c} label="대화 언어" value={`${tgt.name} (${tgt.code})`} />
           <Row c={c} label="내 모국어" value={`${nat.name} (${nat.code})`} />
           <Row c={c} label="음성 인식" value={sttOK ? '지원됨' : '미지원 브라우저'} ok={sttOK} />
-          <Row c={c} label="API 연결" value={!window.CT_API.needsKey() ? '디자인 환경' : (window.CT_API.getKey() ? '연결됨 (내 키)' : '서버 연결됨')} ok last />
+          <Row c={c} label="API 연결" value={!window.CT_API.needsKey() ? '디자인 환경' : (window.CT_API.getKey() ? '연결됨 (내 키)' : '서버 연결됨')} ok />
+          <div style={{
+            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+            padding: '12px 6px',
+          }}>
+            <span style={{ fontSize: 13, color: c.ink2, fontWeight: 500 }}>앱 주소</span>
+            <a href="https://convotrans.jennyryu3d.com" target="_blank" rel="noreferrer" style={{
+              fontSize: 13, fontWeight: 700, color: c.primary, textDecoration: 'none',
+            }}>convotrans.jennyryu3d.com</a>
+          </div>
         </div>
 
         {/* Color skin picker */}
