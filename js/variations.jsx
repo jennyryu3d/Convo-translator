@@ -128,15 +128,39 @@ function SuggNumberedStack({ palette, suggestions, dark, max = 3, onPick }) {
 // V3 — CARD DECK (one at a time)
 // One large card visible. Prev/next arrows + page dots. Like Tinder.
 // ═══════════════════════════════════════════════════════════════════════
-function SuggCardDeck({ palette, suggestions, dark, max = 3, onPick, pickedIdx = null, locked = false }) {
+function SuggCardDeck({ palette, suggestions, dark, max = 3, onPick, pickedIdx = null, locked = false, native = 'KO' }) {
   const c = palette;
-  const TT = window.TappableText || (({ text }) => <span>{text}</span>);
+  const T = (k) => (window.CT_T ? window.CT_T(native, k) : k);
   const list = suggestions.slice(0, max);
   // Start the carousel on the picked card if there is one.
   const [idx, setIdx] = React.useState(typeof pickedIdx === 'number' ? pickedIdx : 0);
   const s = list[idx];
   const isPicked = pickedIdx === idx;
   const anyPicked = typeof pickedIdx === 'number';
+  const canSelect = !(locked && !isPicked);
+
+  // Swipe (navigate) + tap (select) on the card. We tell them apart by how far
+  // the pointer moved: a small movement = tap → select; a horizontal drag =
+  // swipe → previous/next card.
+  const drag = React.useRef(null);
+  function goPrev() { setIdx(i => Math.max(0, i - 1)); }
+  function goNext() { setIdx(i => Math.min(list.length - 1, i + 1)); }
+  function onCardDown(e) {
+    const p = e.touches ? e.touches[0] : e;
+    drag.current = { x: p.clientX, y: p.clientY, t: Date.now() };
+  }
+  function onCardUp(e) {
+    if (!drag.current) return;
+    const p = e.changedTouches ? e.changedTouches[0] : e;
+    const dx = p.clientX - drag.current.x;
+    const dy = p.clientY - drag.current.y;
+    drag.current = null;
+    if (Math.abs(dx) > 40 && Math.abs(dx) > Math.abs(dy)) {
+      if (dx < 0) goNext(); else goPrev();   // swipe
+    } else if (Math.abs(dx) < 12 && Math.abs(dy) < 12) {
+      if (canSelect) onPick?.(s, idx);        // tap = select
+    }
+  }
   // Selected card uses cyan (mine) color; unselected use AI deep-navy.
   const cardBg = isPicked ? c.mine : c.ai;
   const cardInk = isPicked ? (c.mineInk || '#002854') : (c.aiInk || '#fff');
@@ -151,8 +175,8 @@ function SuggCardDeck({ palette, suggestions, dark, max = 3, onPick, pickedIdx =
           fontSize: 10, fontWeight: 800, color: c.ai, letterSpacing: 0.6,
           textTransform: 'uppercase',
         }}>
-          {sparkleIcon} AI 제안 · {idx + 1}/{list.length}
-          {anyPicked && <span style={{ color: c.accent2, marginLeft: 4 }}>· 선택됨</span>}
+          {sparkleIcon} {T('aiSuggestion')} · {idx + 1}/{list.length}
+          {anyPicked && <span style={{ color: c.accent2, marginLeft: 4 }}>· {T('selected')}</span>}
         </span>
         <div style={{ display: 'flex', gap: 4 }}>
           {list.map((_, i) => (
@@ -173,14 +197,20 @@ function SuggCardDeck({ palette, suggestions, dark, max = 3, onPick, pickedIdx =
             opacity: 0.4, zIndex: 0, transform: 'scale(0.96)',
           }} />
         )}
-        <div style={{
-          position: 'relative', zIndex: 1,
-          background: cardBg, borderRadius: 16,
-          padding: '16px 16px 14px',
-          boxShadow: `0 8px 24px ${cardBg}55`,
-          outline: isPicked ? `2px solid ${c.accent2}` : 'none',
-          outlineOffset: 2,
-        }}>
+        <div
+          onTouchStart={onCardDown} onTouchEnd={onCardUp}
+          onPointerDown={onCardDown} onPointerUp={onCardUp}
+          style={{
+            position: 'relative', zIndex: 1,
+            background: cardBg, borderRadius: 16,
+            padding: '16px 16px 14px',
+            boxShadow: `0 8px 24px ${cardBg}55`,
+            outline: isPicked ? `2px solid ${c.accent2}` : 'none',
+            outlineOffset: 2,
+            cursor: canSelect ? 'pointer' : 'default',
+            touchAction: 'pan-y',
+            userSelect: 'none', WebkitUserSelect: 'none',
+          }}>
           {isPicked && (
             <div style={{
               display: 'inline-flex', alignItems: 'center', gap: 4,
@@ -188,25 +218,29 @@ function SuggCardDeck({ palette, suggestions, dark, max = 3, onPick, pickedIdx =
               color: cardInk, opacity: 0.85, marginBottom: 6,
             }}>
               <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12l5 5 9-11"/></svg>
-              내가 선택한 답변
+              {T('myChosenReply')}
             </div>
           )}
           <div style={{
             fontSize: 17, color: cardInk, fontWeight: 700, lineHeight: 1.4,
             letterSpacing: '-0.2px', marginBottom: 8,
-          }}><TT text={s.en} lang="target" id={`sugg-en-${idx}`} /></div>
+          }}>{s.en}</div>
           <div style={{
             fontSize: 13, color: cardInk, opacity: 0.95, lineHeight: 1.45,
             paddingTop: 8, borderTop: `1px dashed ${cardInk}55`,
             display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 8,
           }}>
-            <span style={{ flex: 1 }}><TT text={s.ko} lang="native" id={`sugg-ko-${idx}`} /></span>
-            {/* Speaker button — plays the target-language (en) sentence */}
-            <button onClick={(e) => { e.stopPropagation(); window.CT_SPEAK && window.CT_SPEAK.once(s.en); }} style={{
+            <span style={{ flex: 1 }}>{s.ko}</span>
+            {/* Speaker button — plays the target-language (en) sentence.
+                stopPropagation so it doesn't trigger the card's tap-to-select. */}
+            <button
+              onPointerDown={(e) => e.stopPropagation()}
+              onTouchStart={(e) => e.stopPropagation()}
+              onClick={(e) => { e.stopPropagation(); window.CT_SPEAK && window.CT_SPEAK.once(s.en); }} style={{
               flexShrink: 0, width: 30, height: 30, borderRadius: 999, border: 'none', cursor: 'pointer',
               background: isPicked ? 'rgba(0,40,84,0.12)' : 'rgba(255,255,255,0.18)',
               color: cardInk, display: 'flex', alignItems: 'center', justifyContent: 'center',
-            }} title="듣기" aria-label="듣기">
+            }} title={T('listen')} aria-label={T('listen')}>
               <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 5L6 9H2v6h4l5 4V5z"/><path d="M15.5 8.5a4 4 0 0 1 0 7"/><path d="M19 5a8 8 0 0 1 0 14"/></svg>
             </button>
           </div>
@@ -225,7 +259,7 @@ function SuggCardDeck({ palette, suggestions, dark, max = 3, onPick, pickedIdx =
           background: 'transparent', color: '#fff', opacity: idx === 0 ? 0.3 : 1,
           display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
           filter: idx === 0 ? 'none' : 'drop-shadow(0 0 5px rgba(255,255,255,0.9))',
-        }} aria-label="이전 답변">
+        }} aria-label={T('prev')}>
           <svg width="25" height="25" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" strokeWidth="3.6" strokeLinecap="round" strokeLinejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
         </button>
 
@@ -238,7 +272,7 @@ function SuggCardDeck({ palette, suggestions, dark, max = 3, onPick, pickedIdx =
             fontSize: 14, fontWeight: 800, letterSpacing: '0.01em',
             display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7,
           }}>
-          {isPicked ? '선택한 답변' : locked ? '지난 제안' : '이 답변 사용하기'}
+          {isPicked ? T('selectedReply') : locked ? T('pastSuggestion') : T('useReply')}
           {!locked && !isPicked && (
             <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14m-5-5 5 5-5 5"/></svg>
           )}
@@ -252,7 +286,7 @@ function SuggCardDeck({ palette, suggestions, dark, max = 3, onPick, pickedIdx =
           background: 'transparent', color: '#fff', opacity: idx === list.length - 1 ? 0.3 : 1,
           display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
           filter: idx === list.length - 1 ? 'none' : 'drop-shadow(0 0 5px rgba(255,255,255,0.9))',
-        }} aria-label="다음 답변">
+        }} aria-label={T('next')}>
           <svg width="25" height="25" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" strokeWidth="3.6" strokeLinecap="round" strokeLinejoin="round"><path d="M9 18l6-6-6-6"/></svg>
         </button>
       </div>
@@ -457,7 +491,7 @@ function SuggBranchPaths({ palette, suggestions, dark, max = 3, onPick }) {
 }
 
 // Router
-function SuggestionDisplay({ variant, palette, suggestions, dark, max = 3, onPick, pickedIdx = null, locked = false }) {
+function SuggestionDisplay({ variant, palette, suggestions, dark, max = 3, onPick, pickedIdx = null, locked = false, native = 'KO' }) {
   if (!suggestions || !suggestions.length) return null;
   const map = {
     chips: SuggKeyboardStrip,
@@ -468,7 +502,7 @@ function SuggestionDisplay({ variant, palette, suggestions, dark, max = 3, onPic
     tabbed: SuggBranchPaths,
   };
   const Cmp = map[variant] || SuggCardDeck;
-  return <Cmp palette={palette} suggestions={suggestions} dark={dark} max={max} onPick={onPick} pickedIdx={pickedIdx} locked={locked} />;
+  return <Cmp palette={palette} suggestions={suggestions} dark={dark} max={max} onPick={onPick} pickedIdx={pickedIdx} locked={locked} native={native} />;
 }
 
 Object.assign(window, {
