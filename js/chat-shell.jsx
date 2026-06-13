@@ -83,20 +83,20 @@ function TopBar({ palette, dark, onToggleDark, showMascot = true, onSearch, onSe
         </div>
       </div>
 
-      {/* Two language slots — other person's language + my language */}
+      {/* Two language slots — labelled in the user's own (native) language */}
       <div style={{ display: 'flex', gap: 8 }}>
         <LangSlot
           c={c}
           role="target"
           lang={tgt}
-          label="상대방 언어"
+          label={window.CT_T ? window.CT_T(native, 'yourLanguage') : '상대방 언어'}
           onClick={() => onPickTarget?.()}
         />
         <LangSlot
           c={c}
           role="native"
           lang={nat}
-          label="내 언어"
+          label={window.CT_T ? window.CT_T(native, 'myLanguage') : '내 언어'}
           onClick={() => onPickNative?.()}
         />
       </div>

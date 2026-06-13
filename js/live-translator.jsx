@@ -425,6 +425,7 @@ function LiveTranslator({ tweaks, setTweak }) {
                   suggestions={m.suggestions}
                   dark={dark}
                   max={tweaks.maxSugg}
+                  native={native}
                   pickedIdx={typeof m.pickedIdx === 'number' ? m.pickedIdx : null}
                   locked={locked}
                   onPick={(s, idx) => pickSuggestion(m.id, s, idx)}
@@ -965,7 +966,8 @@ function LiveInput({ palette, dark, fontScale = 1, appMode = 'practice', onModeC
     const locale = side === 'me' ? nativeLang.locale : targetLang.locale;
     let captured = '';
     const rec = await window.CT_RECOGNIZE.startWithPermission(locale, {
-      continuous: false,
+      // continuous: keep recording through pauses; user taps the mic again to stop.
+      continuous: true,
       onInterim: () => {},
       onFinal: (t) => { captured = t; },
       onError: () => { setRecSide(null); },
@@ -997,7 +999,8 @@ function LiveInput({ palette, dark, fontScale = 1, appMode = 'practice', onModeC
   async function practiceMic() {
     if (recSide === 'me' && recRef.current) { recRef.current.stop(); return; }
     const rec = await window.CT_RECOGNIZE.startWithPermission(nativeLang.locale, {
-      continuous: false,
+      // continuous: keep recording through pauses; user taps the mic again to stop.
+      continuous: true,
       onInterim: (t) => setRawInput(t),
       onFinal: (t) => setRawInput(t),
       onError: () => setRecSide(null),
@@ -1026,11 +1029,13 @@ function LiveInput({ palette, dark, fontScale = 1, appMode = 'practice', onModeC
       try {
         const targetName = targetLang.native;
         const res = await window.CT_API.complete(
-          `You are a translation + editing assistant.
-Target conversation language: ${targetName}.
-User input may be in ${targetName} (lightly polish grammar/clarity) OR another language (translate to natural ${targetName}).
-Output one-line JSON: {"kind":"polish"|"translate"|"clean","out":"<final ${targetName}>"}
-Strictly JSON, no markdown.
+          `You are a translation + editing assistant. The message will be sent to a NATIVE ${targetName} speaker, so the output MUST be fully correct, natural, native-level ${targetName}.
+Decide the kind and produce "out":
+- If the input is in another language → translate it into natural ${targetName}. kind = "translate".
+- If the input is already in ${targetName} but has ANY grammar mistakes, awkward wording, wrong word choice, or anything a native speaker would not say (or could misunderstand) → REWRITE it into correct, natural, native-level ${targetName}. kind = "polish".
+- ONLY if the input is already fully correct and natural ${targetName} that needs no change → keep it as-is. kind = "clean".
+Preserve the speaker's original meaning and tone; do not add new information.
+Output one-line JSON only, no markdown: {"kind":"polish"|"translate"|"clean","out":"<final ${targetName}>"}
 
 INPUT: ${text}`
         );
