@@ -981,7 +981,8 @@ function LiveInput({ palette, dark, fontScale = 1, appMode = 'practice', onModeC
         try {
           if (side === 'me') {
             const out = await translate(text, nativeLang.native, targetLang.native);
-            window.CT_SPEAK && window.CT_SPEAK.once(out, targetLang.locale);
+            // Do NOT auto-play through the speaker — it can startle the other
+            // person. The message bubble has a speaker button for manual play.
             onSendMine(text, out, 'foreign', { noReply: true });
           } else {
             const out = await translate(text, targetLang.native, nativeLang.native);

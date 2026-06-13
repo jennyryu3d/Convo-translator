@@ -1,9 +1,9 @@
 // App version + settings sheet (bottom-sheet) showing version info.
 window.CT_VERSION = {
-  number: '1.3.2',
-  build: '2026.06.13c',
+  number: '1.3.3',
+  build: '2026.06.13d',
   label: 'Beta',
-  notes: '음성 인식 중복/오작성 수정(발화 단위 재시작) · 저장 대화에 실시간/학습 모드 아이콘 구분 · 홈 새로고침 버튼 · 단어 탭 번역 + 좌우 스와이프',
+  notes: '실시간 "내가 말하기" 후 자동 음성출력 끔(스피커 버튼으로 수동 재생) · 음성 중복 수정 · 저장 대화 모드 아이콘 구분',
 };
 
 function SettingsSheet({ palette, dark, onClose, target, native, skinId = 'blue', onPickSkin }) {
