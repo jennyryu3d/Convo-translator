@@ -5,7 +5,9 @@
 function SearchOverlay({ palette, dark, onClose, embedded = false, onJump, onOpenSession, initialEmpty = false, mode = 'search' }) {
   const c = palette;
   const I = window.CT_ICONS;
-  const isHistory = mode === 'history';
+  // Unified "saved conversations" page: one place to browse, search, filter by
+  // date, and delete. (Both the top-bar search and history buttons open this.)
+  const isHistory = true;
   const [q, setQ] = React.useState('');
   const [filter, setFilter] = React.useState('all');  // all | mine | them
   const [dateFrom, setDateFrom] = React.useState('');
