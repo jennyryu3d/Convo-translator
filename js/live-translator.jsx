@@ -41,8 +41,9 @@ function LiveTranslator({ tweaks, setTweak }) {
   function setSkin(id) {
     try { localStorage.setItem('ct_skin', id); } catch (e) {}
     if (setTweak) setTweak('skin', id);
-    const nm = (window.CT_SKINS && window.CT_SKINS[id] && window.CT_SKINS[id].name) || '';
-    setSkinToast(`${nm} 테마로 변경됐어요 · 앞으로 이 색상이 유지돼요`);
+    const sk = (window.CT_SKINS && window.CT_SKINS[id]) || {};
+    const nm = (window.CT_LOCALE === 'EN' ? (sk.nameEn || sk.name) : sk.name) || '';
+    setSkinToast(window.t('skinChanged', { name: nm }));
     setTimeout(() => setSkinToast(null), 2600);
   }
   const [convo, setConvo] = React.useState(() => {
@@ -134,7 +135,7 @@ function LiveTranslator({ tweaks, setTweak }) {
     if (!convo.length) { startNewConversation(); return; }
     // Just clear — no save sheet (the bookmark button handles saving).
     // A light confirm prevents accidental loss of an unsaved conversation.
-    const ok = window.confirm('현재 대화를 지우고 새로 시작할까요?');
+    const ok = window.confirm(window.t('clearAndRestart'));
     if (ok) startNewConversation();
   }
 
@@ -142,7 +143,9 @@ function LiveTranslator({ tweaks, setTweak }) {
     const d = new Date();
     const h = d.getHours();
     const m = String(d.getMinutes()).padStart(2, '0');
-    return (h < 12 ? '오전 ' : '오후 ') + ((h % 12) || 12) + ':' + m;
+    const hr = (h % 12) || 12;
+    if (window.CT_LOCALE === 'EN') return hr + ':' + m + (h < 12 ? ' AM' : ' PM');
+    return (h < 12 ? '오전 ' : '오후 ') + hr + ':' + m;
   }
 
   // Tap a word in any bubble → ask the AI whether the tapped word is part of a
@@ -186,10 +189,10 @@ function LiveTranslator({ tweaks, setTweak }) {
         if (p && p.translation) {
           setWordPop(wp => wp ? { ...wp, term: p.selected || word, translation: p.translation, hlSelected: p.selected || word, loading: false } : null);
         } else {
-          setWordPop(wp => wp ? { ...wp, translation: raw || '(번역 실패)', loading: false } : null);
+          setWordPop(wp => wp ? { ...wp, translation: raw || window.t('transFailed'), loading: false } : null);
         }
       } catch (e) {
-        setWordPop(wp => wp ? { ...wp, translation: '(번역을 가져오지 못했어요)', loading: false } : null);
+        setWordPop(wp => wp ? { ...wp, translation: window.t('transFetchFail'), loading: false } : null);
       }
     })();
   }
@@ -393,10 +396,9 @@ function LiveTranslator({ tweaks, setTweak }) {
             <div style={{
               fontSize: 19, fontWeight: 800, color: c.ink,
               fontFamily: "'Chakra Petch', system-ui, sans-serif",
-            }}>대화를 시작해 보세요</div>
+            }}>{window.t('startConvo')}</div>
             <div style={{ fontSize: 13, color: c.ink2, lineHeight: 1.6 }}>
-              아래에서 <b style={{ color: c.ai }}>실시간 대화</b> 또는 <b style={{ color: c.primary }}>학습 모드</b>를 골라<br/>
-              말하거나 입력하면 번역과 다음 표현 제안이 시작돼요
+              {window.t('emptyHintPre')} <b style={{ color: c.ai }}>{window.t('liveMode')}</b> {window.t('emptyHintMid')} <b style={{ color: c.primary }}>{window.t('learnMode')}</b>{window.t('emptyHintPost')}
             </div>
           </div>
         )}
@@ -720,7 +722,7 @@ function TappableText({ text, lang, id }) {
 // Confirm dialog when switching modes with an in-progress conversation.
 function ModeSwitchConfirm({ palette, toMode, onKeep, onClear, onCancel }) {
   const c = palette;
-  const toName = toMode === 'live' ? '실시간 대화' : '학습 모드';
+  const toName = toMode === 'live' ? window.t('liveMode') : window.t('learnMode');
   return (
     <div onClick={onCancel} style={{
       position: 'fixed', inset: 0, zIndex: 320,
@@ -733,25 +735,25 @@ function ModeSwitchConfirm({ palette, toMode, onKeep, onClear, onCancel }) {
         boxShadow: '0 20px 48px rgba(0,18,38,0.3)',
       }}>
         <div style={{ fontSize: 16, fontWeight: 800, color: c.ink, marginBottom: 6, fontFamily: "'Chakra Petch', system-ui, sans-serif" }}>
-          {toName}(으)로 전환할까요?
+          {window.t('modeSwitchTo', { name: toName })}
         </div>
         <div style={{ fontSize: 13, color: c.ink2, lineHeight: 1.55, marginBottom: 18 }}>
-          진행 중인 대화가 있어요. 대화를 유지한 채 전환하거나, 지우고 새로 시작할 수 있어요.
+          {window.t('modeSwitchBody')}
         </div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
           <button onClick={onKeep} style={{
             height: 44, borderRadius: 999, border: 'none', cursor: 'pointer',
             background: c.primary, color: c.primaryInk, fontSize: 14, fontWeight: 800,
-          }}>대화 유지하고 전환</button>
+          }}>{window.t('keepAndSwitch')}</button>
           <button onClick={onClear} style={{
             height: 44, borderRadius: 999, cursor: 'pointer',
             background: 'transparent', color: '#C0392B', border: `1.5px solid ${c.divider}`,
             fontSize: 14, fontWeight: 800,
-          }}>대화 지우고 전환</button>
+          }}>{window.t('clearAndSwitch')}</button>
           <button onClick={onCancel} style={{
             height: 40, borderRadius: 999, border: 'none', cursor: 'pointer',
             background: 'transparent', color: c.ink3, fontSize: 13, fontWeight: 700,
-          }}>취소</button>
+          }}>{window.t('cancel')}</button>
         </div>
       </div>
     </div>
@@ -792,12 +794,12 @@ function WordPopup({ pop, palette, onClose }) {
       }}>
         <span style={{ fontSize: 15, color: c.primary, fontWeight: 700, lineHeight: 1.3,
           whiteSpace: 'normal', maxWidth: popW - 50, display: 'inline-block' }}>
-          {pop.loading ? <span style={{ color: c.ink3, fontWeight: 500 }}>번역 중…</span> : pop.translation}
+          {pop.loading ? <span style={{ color: c.ink3, fontWeight: 500 }}>{window.t('translating')}</span> : pop.translation}
         </span>
         <button onClick={() => window.CT_SPEAK && window.CT_SPEAK.once(pop.term)} style={{
           flexShrink: 0, width: 28, height: 28, borderRadius: 999, border: 'none', cursor: 'pointer',
           background: c.primarySoft, color: c.primary, display: 'flex', alignItems: 'center', justifyContent: 'center',
-        }} title="듣기" aria-label="듣기">
+        }} title={window.t('listen')} aria-label={window.t('listen')}>
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 5L6 9H2v6h4l5 4V5z"/><path d="M15.5 8.5a4 4 0 0 1 0 7"/><path d="M19 5a8 8 0 0 1 0 14"/></svg>
         </button>
       </div>
@@ -828,22 +830,22 @@ function SavedConvoViewer({ palette, dark, session, radius, shadow, fontScale, n
           width: 36, height: 36, borderRadius: 999, border: 'none',
           background: 'transparent', color: c.ink2, cursor: 'pointer', flexShrink: 0,
           display: 'flex', alignItems: 'center', justifyContent: 'center',
-        }} title="닫기">
+        }} title={window.t('close')}>
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
         </button>
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ fontSize: 14, fontWeight: 800, color: c.ink, lineHeight: 1.3, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', fontFamily: "'Chakra Petch', system-ui, sans-serif" }}>
-            {session.title || session.partner || '저장된 대화'}
+            {session.title || session.partner || window.t('savedConvoTopic')}
           </div>
           <div style={{ fontSize: 11, color: c.ink3, marginTop: 1 }}>
-            {(session.label || '저장됨')} · {session.date || ''} · {msgs.length}개 메시지
+            {(session.label || window.t('savedLabel'))} · {session.date || ''} · {window.t('msgsCount', { n: msgs.length })}
           </div>
         </div>
         <span style={{
           fontSize: 9, fontWeight: 800, letterSpacing: 0.5, textTransform: 'uppercase',
           color: c.ink3, background: c.bg, border: `1px solid ${c.divider}`,
           padding: '3px 8px', borderRadius: 999, flexShrink: 0,
-        }}>읽기 전용</span>
+        }}>{window.t('readOnly')}</span>
       </div>
 
       {/* Summary (if any) */}
@@ -861,7 +863,7 @@ function SavedConvoViewer({ palette, dark, session, radius, shadow, fontScale, n
       <div ref={scrollRef} style={{ flex: 1, minHeight: 0, overflowY: 'auto', padding: '12px 14px 24px' }}>
         {msgs.length === 0 && (
           <div style={{ marginTop: 40, textAlign: 'center', fontSize: 13, color: c.ink3 }}>
-            이 대화에는 저장된 메시지가 없어요.
+            {window.t('noMsgsInConvo')}
           </div>
         )}
         {msgs.map((m, i) => (
@@ -901,13 +903,13 @@ function FloatingConvoActions({ palette, onSave, onNew }) {
       marginRight: 2, marginTop: -56,
     }}>
       {/* 새 대화 */}
-      <button onClick={onNew} title="새 대화" style={{ ...fab(false), pointerEvents: 'auto' }}>
+      <button onClick={onNew} title={window.t('newConvo')} style={{ ...fab(false), pointerEvents: 'auto' }}>
         <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
           <path d="M12 5v14M5 12h14"/>
         </svg>
       </button>
       {/* 대화 저장 */}
-      <button onClick={onSave} title="대화 저장" style={{ ...fab(true), pointerEvents: 'auto' }}>
+      <button onClick={onSave} title={window.t('saveConvoBold')} style={{ ...fab(true), pointerEvents: 'auto' }}>
         <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
           <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/>
         </svg>
@@ -1050,7 +1052,7 @@ INPUT: ${text}`
           setPreview(parsed.out);
           setInputKind(parsed.kind === 'translate' ? 'foreign' : parsed.kind === 'polish' ? 'polished' : 'clean');
         } else { setPreview(raw.replace(/^["'`]|["'`]$/g, '')); setInputKind('foreign'); }
-      } catch (e) { setPreview('(번역 준비 중…)'); setInputKind('foreign'); }
+      } catch (e) { setPreview(window.t('transPreparing')); setInputKind('foreign'); }
       finally { setTranslating(false); }
     }, 600);
     return () => clearTimeout(t);

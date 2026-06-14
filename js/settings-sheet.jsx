@@ -3,7 +3,10 @@ window.CT_VERSION = {
   number: '1.4.0',
   build: '2026.06.14',
   label: 'Beta',
-  notes: '다국어 UI 1차: 내 언어가 한국어가 아니면 메인 대화 화면이 영어로 전환 · 자동 음성출력 끔 · 음성 중복 수정 · 저장 대화 모드 아이콘',
+  notes: {
+    KO: '다국어 UI: 내 언어가 한국어가 아니면 전체 화면이 영어로 전환 · 로딩 로고 · 자동 음성출력 끔 · 음성 중복 수정',
+    EN: 'Bilingual UI: when your language isn\'t Korean, the whole app switches to English · loading logo · auto speak-out off · duplicate-voice fix',
+  },
 };
 
 function SettingsSheet({ palette, dark, onClose, target, native, skinId = 'blue', onPickSkin }) {
@@ -44,26 +47,26 @@ function SettingsSheet({ palette, dark, onClose, target, native, skinId = 'blue'
             marginTop: 4, display: 'inline-flex', alignItems: 'center', gap: 6,
             fontSize: 12, color: c.ink2, fontWeight: 600,
           }}>
-            <span>버전 {v.number}</span>
+            <span>{window.t('version')} {v.number}</span>
             <span style={{
               fontSize: 10, fontWeight: 700, color: c.primaryInk, background: c.primary,
               padding: '1px 7px', borderRadius: 999,
             }}>{v.label}</span>
           </div>
-          <div style={{ marginTop: 3, fontSize: 11, color: c.ink3 }}>빌드 {v.build}</div>
+          <div style={{ marginTop: 3, fontSize: 11, color: c.ink3 }}>{window.t('build')} {v.build}</div>
         </div>
 
         {/* Info rows */}
         <div style={{ padding: '0 16px' }}>
-          <Row c={c} label="대화 언어" value={`${tgt.name} (${tgt.code})`} />
-          <Row c={c} label="내 모국어" value={`${nat.name} (${nat.code})`} />
-          <Row c={c} label="음성 인식" value={sttOK ? '지원됨' : '미지원 브라우저'} ok={sttOK} />
-          <Row c={c} label="API 연결" value={!window.CT_API.needsKey() ? '디자인 환경' : (window.CT_API.getKey() ? '연결됨 (내 키)' : '서버 연결됨')} ok />
+          <Row c={c} label={window.t('convoLanguage')} value={`${tgt.name} (${tgt.code})`} />
+          <Row c={c} label={window.t('myNativeLang')} value={`${nat.name} (${nat.code})`} />
+          <Row c={c} label={window.t('speechRecognition')} value={sttOK ? window.t('supported') : window.t('unsupportedBrowser')} ok={sttOK} />
+          <Row c={c} label={window.t('apiConnection')} value={!window.CT_API.needsKey() ? window.t('designEnv') : (window.CT_API.getKey() ? window.t('connectedMyKey') : window.t('serverConnected'))} ok />
           <div style={{
             display: 'flex', alignItems: 'center', justifyContent: 'space-between',
             padding: '12px 6px',
           }}>
-            <span style={{ fontSize: 13, color: c.ink2, fontWeight: 500 }}>앱 주소</span>
+            <span style={{ fontSize: 13, color: c.ink2, fontWeight: 500 }}>{window.t('appAddress')}</span>
             <a href="https://convotrans.jennyryu3d.com" target="_blank" rel="noreferrer" style={{
               fontSize: 13, fontWeight: 700, color: c.primary, textDecoration: 'none',
             }}>convotrans.jennyryu3d.com</a>
@@ -73,7 +76,7 @@ function SettingsSheet({ palette, dark, onClose, target, native, skinId = 'blue'
         {/* Color skin picker */}
         <div style={{ padding: '14px 18px 0' }}>
           <div style={{ fontSize: 10, fontWeight: 800, letterSpacing: 0.6, textTransform: 'uppercase', color: c.ink3, marginBottom: 8, fontFamily: "'Chakra Petch', system-ui, sans-serif" }}>
-            색상 테마
+            {window.t('colorTheme')}
           </div>
           <div style={{ display: 'flex', gap: 10 }}>
             {Object.keys(window.CT_SKINS || {}).map(id => {
@@ -94,7 +97,7 @@ function SettingsSheet({ palette, dark, onClose, target, native, skinId = 'blue'
                   }}>
                     {on && <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="3.2" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12l5 5 9-11"/></svg>}
                   </span>
-                  <span style={{ fontSize: 12, fontWeight: 700, color: on ? c.ink : c.ink2 }}>{sk.name}</span>
+                  <span style={{ fontSize: 12, fontWeight: 700, color: on ? c.ink : c.ink2 }}>{window.CT_LOCALE === 'EN' ? (sk.nameEn || sk.name) : sk.name}</span>
                 </button>
               );
             })}
@@ -106,12 +109,12 @@ function SettingsSheet({ palette, dark, onClose, target, native, skinId = 'blue'
             background: c.bg, borderRadius: 12, padding: '10px 12px',
             fontSize: 11, color: c.ink2, lineHeight: 1.5,
           }}>
-            <b style={{ color: c.primary }}>이번 업데이트</b><br/>{v.notes}
+            <b style={{ color: c.primary }}>{window.t('whatsNew')}</b><br/>{(v.notes && (v.notes[window.CT_LOCALE] || v.notes.KO)) || v.notes}
           </div>
         </div>
 
         <div style={{ padding: '14px 20px 0', textAlign: 'center', fontSize: 11, color: c.ink3, lineHeight: 1.5 }}>
-          대화를 잇는 실시간 번역기 · 14개 언어 지원<br/>
+          {window.t('tagline')}<br/>
           © 2026 ConvoTrans
         </div>
       </div>

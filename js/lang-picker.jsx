@@ -31,17 +31,13 @@ function LangPickerModal({ palette, dark, role, current, onPick, onClose }) {
             fontSize: 10, fontWeight: 800, color: isTarget ? c.primary : c.ink2,
             letterSpacing: 0.6, textTransform: 'uppercase', marginBottom: 2,
           }}>
-            {isTarget ? '대화 언어 선택' : '내 모국어 선택'}
+            {isTarget ? window.t('pickConvoLang') : window.t('pickNativeLang')}
           </div>
           <div style={{ fontSize: 13, color: c.ink, fontWeight: 700 }}>
-            {isTarget
-              ? '상대방과 대화·기록·교정에 쓰일 언어'
-              : '나만 보는 보조 번역 언어'}
+            {isTarget ? window.t('targetSlotDesc') : window.t('nativeSlotDesc')}
           </div>
           <div style={{ fontSize: 11, color: c.ink3, marginTop: 4, lineHeight: 1.5 }}>
-            {isTarget
-              ? '내가 어떤 언어로 입력해도 이 언어로 자동 번역/교정되어 상대에게 전송됩니다.'
-              : '상대방 말이 이 언어로 번역돼 나에게만 보입니다.'}
+            {isTarget ? window.t('targetSlotHint') : window.t('nativeSlotHint')}
           </div>
         </div>
         <div style={{
