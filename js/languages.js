@@ -33,8 +33,38 @@ window.CT_LANG = {
 // Used for the top language-slot labels and the suggestion-card controls so
 // they read in the user's own language. English is the fallback for any key.
 window.CT_UI = {
-  EN: { myLanguage:'My language', yourLanguage:"Other's language", useReply:'Use this reply', selectedReply:'Selected reply', pastSuggestion:'Past suggestion', myChosenReply:'My chosen reply', aiSuggestion:'AI suggestions', selected:'Selected', listen:'Listen', prev:'Previous', next:'Next' },
-  KO: { myLanguage:'내 언어', yourLanguage:'상대방 언어', useReply:'이 답변 사용하기', selectedReply:'선택한 답변', pastSuggestion:'지난 제안', myChosenReply:'내가 선택한 답변', aiSuggestion:'AI 제안', selected:'선택됨', listen:'듣기', prev:'이전', next:'다음' },
+  EN: {
+    yourLanguage: "Other's language", myLanguage: 'My language',
+    meSent: 'Me · Sent', asIs: 'As-is', corrected: '✏ Corrected', correctedMine: 'Corrected · my input', myInput: 'My input',
+    them: 'Them', translation: 'Translation',
+    liveMode: 'Live chat', learnMode: 'Learn mode',
+    whoSpeaksHint: "Tap who's speaking, then talk", processing: 'Processing…', listeningTapDone: 'Listening · tap to finish',
+    iSpeak: "I'll speak", theySpeak: 'They speak', suggest3: '3 suggestions',
+    practiceHint: 'Type and AI plays your partner — it replies and suggests what to say next',
+    placeholderAnyLang: "Type in any language — it's sent as {lang}…",
+    tagAsIs: '✓ {code} as-is', tagFix: '✏ {code} fix', tagTranslate: '→ {code} translate',
+    autoProcessing: 'Auto-processing…', autoTranslateHint: 'Translates automatically as you type',
+    voiceInput: '{lang} voice input', sendTo: 'Send as {lang}',
+    aiSuggestion: 'AI suggestions', selected: 'Selected', myChosenReply: 'My chosen reply',
+    listen: 'Listen', prev: 'Previous', next: 'Next',
+    selectedReply: 'Selected', pastSuggestion: 'Past suggestion', useReply: 'Use this reply',
+  },
+  KO: {
+    yourLanguage: '상대방 언어', myLanguage: '내 언어',
+    meSent: '나 · 전송됨', asIs: '그대로', corrected: '✏ 정정됨', correctedMine: '정정됨 · 내 입력', myInput: '내 입력',
+    them: '상대방', translation: '번역',
+    liveMode: '실시간 대화', learnMode: '학습 모드',
+    whoSpeaksHint: '누가 말하는지 누른 뒤 말하세요', processing: '처리 중…', listeningTapDone: '듣는 중 · 탭하면 완료',
+    iSpeak: '내가 말하기', theySpeak: '상대방 말하기', suggest3: '제안 3개',
+    practiceHint: '입력하면 AI가 상대역이 되어 답하고 다음 표현을 제안해요',
+    placeholderAnyLang: '어떤 언어로 입력해도 {lang}로 전송돼요…',
+    tagAsIs: '✓ {code} 그대로', tagFix: '✏ {code} 정정', tagTranslate: '→ {code} 번역',
+    autoProcessing: '자동 처리 중…', autoTranslateHint: '입력하면 자동 번역됩니다',
+    voiceInput: '{lang} 음성 입력', sendTo: '{lang}로 보내기',
+    aiSuggestion: 'AI 제안', selected: '선택됨', myChosenReply: '내가 선택한 답변',
+    listen: '듣기', prev: '이전 답변', next: '다음 답변',
+    selectedReply: '선택한 답변', pastSuggestion: '지난 제안', useReply: '이 답변 사용하기',
+  },
   JA: { myLanguage:'自分の言語', yourLanguage:'相手の言語', useReply:'この返信を使う', selectedReply:'選んだ返信', pastSuggestion:'過去の提案', myChosenReply:'選んだ返信', aiSuggestion:'AI提案', selected:'選択済み', listen:'再生', prev:'前へ', next:'次へ' },
   ZH: { myLanguage:'我的语言', yourLanguage:'对方语言', useReply:'使用此回复', selectedReply:'已选回复', pastSuggestion:'过往建议', myChosenReply:'我选择的回复', aiSuggestion:'AI 建议', selected:'已选择', listen:'朗读', prev:'上一个', next:'下一个' },
   ES: { myLanguage:'Mi idioma', yourLanguage:'Idioma del otro', useReply:'Usar esta respuesta', selectedReply:'Respuesta elegida', pastSuggestion:'Sugerencia anterior', myChosenReply:'Mi respuesta elegida', aiSuggestion:'Sugerencias de IA', selected:'Elegido', listen:'Escuchar', prev:'Anterior', next:'Siguiente' },
@@ -49,6 +79,21 @@ window.CT_UI = {
   HI: { myLanguage:'मेरी भाषा', yourLanguage:'सामने वाले की भाषा', useReply:'यह उत्तर उपयोग करें', selectedReply:'चुना गया उत्तर', pastSuggestion:'पिछला सुझाव', myChosenReply:'मेरा चुना उत्तर', aiSuggestion:'AI सुझाव', selected:'चयनित', listen:'सुनें', prev:'पिछला', next:'अगला' },
 };
 
+// Current UI locale: 'KO' or 'EN'. The app sets this from the user's selected
+// language (Korean → KO, any other language → EN).
+window.CT_LOCALE = 'KO';
+
+// Translate a UI key for the current locale, with optional {placeholder} vars.
+window.t = function (key, vars) {
+  const loc = window.CT_LOCALE === 'EN' ? 'EN' : 'KO';
+  const tbl = window.CT_UI[loc] || window.CT_UI.KO;
+  let s = (tbl && tbl[key] != null) ? tbl[key]
+        : (window.CT_UI.EN[key] != null ? window.CT_UI.EN[key] : key);
+  if (vars) s = String(s).replace(/\{(\w+)\}/g, (m, k) => (vars[k] != null ? vars[k] : m));
+  return s;
+};
+
+// Back-compat: explicit lookup by language code.
 window.CT_T = function (code, key) {
   const tbl = window.CT_UI[code] || window.CT_UI.EN;
   return (tbl && tbl[key]) || window.CT_UI.EN[key] || key;
