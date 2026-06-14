@@ -1,11 +1,11 @@
 // App version + settings sheet (bottom-sheet) showing version info.
 window.CT_VERSION = {
-  number: '1.4.0',
+  number: '1.4.1',
   build: '2026.06.14',
   label: 'Beta',
   notes: {
-    KO: '다국어 UI: 내 언어가 한국어가 아니면 전체 화면이 영어로 전환 · 로딩 로고 · 자동 음성출력 끔 · 음성 중복 수정',
-    EN: 'Bilingual UI: when your language isn\'t Korean, the whole app switches to English · loading logo · auto speak-out off · duplicate-voice fix',
+    KO: '설정 유지: 테마(다크)·언어 선택이 재시작해도 유지 · 30분 이상 지나면 새 대화로 시작 · 상단 언어 라벨은 항상 영어 · 로딩 로고',
+    EN: 'Settings persist: theme (dark) and language choices survive restart · starts fresh after 30+ min idle · top language labels always English · loading logo',
   },
 };
 

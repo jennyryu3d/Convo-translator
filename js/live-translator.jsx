@@ -36,6 +36,7 @@ function LiveTranslator({ tweaks, setTweak }) {
   }
 
   const DRAFT_KEY = 'ct_draft_convo_v1';
+  const DRAFT_TTL = 30 * 60 * 1000; // reopen after >30 min of inactivity → start fresh
 
   // Change color skin: persist + update tweaks so it applies immediately.
   function setSkin(id) {
@@ -47,12 +48,20 @@ function LiveTranslator({ tweaks, setTweak }) {
     setTimeout(() => setSkinToast(null), 2600);
   }
   const [convo, setConvo] = React.useState(() => {
-    // Restore an in-progress (unsaved) conversation if the app was reopened.
+    // Restore an in-progress (unsaved) conversation if the app was reopened —
+    // but only if it was active within the last 30 minutes. Older drafts are
+    // dropped so a long-abandoned chat opens fresh.
     try {
       const raw = localStorage.getItem(DRAFT_KEY);
       if (raw) {
-        const arr = JSON.parse(raw);
-        if (Array.isArray(arr) && arr.length) return arr;
+        const data = JSON.parse(raw);
+        // New format: { savedAt, msgs }. Old format: a bare array (no timestamp).
+        const arr = Array.isArray(data) ? data : (data && data.msgs);
+        const savedAt = Array.isArray(data) ? 0 : (data && data.savedAt) || 0;
+        if (Array.isArray(arr) && arr.length) {
+          if (!savedAt || (Date.now() - savedAt) <= DRAFT_TTL) return arr;
+          localStorage.removeItem(DRAFT_KEY); // stale → start fresh
+        }
       }
     } catch (e) {}
     return [];
@@ -90,7 +99,9 @@ function LiveTranslator({ tweaks, setTweak }) {
   // reload doesn't lose it. Cleared on explicit save or "새 대화".
   React.useEffect(() => {
     try {
-      if (convo.length) localStorage.setItem(DRAFT_KEY, JSON.stringify(convo));
+      // Store with a timestamp = time of last activity, so reopening after a
+      // long gap can decide whether to restore or start fresh.
+      if (convo.length) localStorage.setItem(DRAFT_KEY, JSON.stringify({ savedAt: Date.now(), msgs: convo }));
       else localStorage.removeItem(DRAFT_KEY);
     } catch (e) {}
   }, [convo]);

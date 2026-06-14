@@ -83,20 +83,21 @@ function TopBar({ palette, dark, onToggleDark, showMascot = true, onSearch, onSe
         </div>
       </div>
 
-      {/* Two language slots — labels follow the UI locale (KO or EN) */}
+      {/* Two language slots — labels ALWAYS in English so a non-Korean speaker
+          can recognize "my / other's language" even when the UI is Korean. */}
       <div style={{ display: 'flex', gap: 8 }}>
         <LangSlot
           c={c}
           role="target"
           lang={tgt}
-          label={window.t('yourLanguage')}
+          label={(window.CT_UI && window.CT_UI.EN.yourLanguage) || "Other's language"}
           onClick={() => onPickTarget?.()}
         />
         <LangSlot
           c={c}
           role="native"
           lang={nat}
-          label={window.t('myLanguage')}
+          label={(window.CT_UI && window.CT_UI.EN.myLanguage) || 'My language'}
           onClick={() => onPickNative?.()}
         />
       </div>
