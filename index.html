@@ -28,6 +28,28 @@
     button { font-family: inherit; }
     /* fill viewport including iOS safe areas */
     #root { width: 100%; height: 100%; }
+
+    /* Loading splash — shown while Babel compiles the app; React replaces
+       #root's contents on mount, so this disappears automatically. */
+    #ct-splash {
+      position: fixed; inset: 0; z-index: 1;
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center; gap: 18px;
+      background: #F2F5F8;
+    }
+    #ct-splash .ct-mark {
+      width: 92px; height: 92px;
+      filter: drop-shadow(0 10px 24px rgba(32,59,55,0.18));
+      animation: ctSplashPulse 1.4s ease-in-out infinite;
+    }
+    #ct-splash .ct-word {
+      font-family: 'Plus Jakarta Sans', -apple-system, system-ui, sans-serif;
+      font-weight: 800; font-size: 21px; letter-spacing: -0.3px; color: #203B37;
+    }
+    @keyframes ctSplashPulse {
+      0%, 100% { transform: scale(1); opacity: 0.85; }
+      50%      { transform: scale(1.06); opacity: 1; }
+    }
   </style>
 
   <script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
@@ -46,11 +68,24 @@
       </g>
     </svg>
   </template>
-  <div id="root"></div>
+  <div id="root">
+    <div id="ct-splash">
+      <svg class="ct-mark" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+        <rect width="200" height="200" rx="44" fill="#203B37"/>
+        <g transform="translate(60,60)">
+          <rect width="50" height="36" rx="10" fill="#96CDB0"/>
+          <path d="M10 36 L18 44 L22 36 Z" fill="#96CDB0"/>
+          <rect x="30" y="44" width="50" height="36" rx="10" fill="#EEE8B2"/>
+          <path d="M70 80 L62 88 L58 80 Z" fill="#EEE8B2"/>
+        </g>
+      </svg>
+      <div class="ct-word">ConvoTrans</div>
+    </div>
+  </div>
 
-  <script src="js/data.js?v=44"></script>
+  <script src="js/data.js?v=53"></script>
   <script src="js/history.js?v=44"></script>
-  <script src="js/languages.js?v=52"></script>
+  <script src="js/languages.js?v=53"></script>
   <script src="js/api.js?v=45"></script>
 
   <script type="text/babel" src="tweaks-panel.jsx?v=44"></script>
@@ -61,14 +96,14 @@
   <script type="text/babel" src="js/drag-scroll.jsx?v=44"></script>
   <script type="text/babel" src="js/lang-chip.jsx?v=47"></script>
   <script type="text/babel" src="js/voice-mode.jsx?v=44"></script>
-  <script type="text/babel" src="js/search.jsx?v=50"></script>
-  <script type="text/babel" src="js/lang-picker.jsx?v=47"></script>
-  <script type="text/babel" src="js/settings-sheet.jsx?v=52"></script>
-  <script type="text/babel" src="js/save-convo.jsx?v=50"></script>
-  <script type="text/babel" src="js/api-key-banner.jsx?v=45"></script>
-  <script type="text/babel" src="js/chat-shell.jsx?v=52"></script>
+  <script type="text/babel" src="js/search.jsx?v=53"></script>
+  <script type="text/babel" src="js/lang-picker.jsx?v=53"></script>
+  <script type="text/babel" src="js/settings-sheet.jsx?v=54"></script>
+  <script type="text/babel" src="js/save-convo.jsx?v=53"></script>
+  <script type="text/babel" src="js/api-key-banner.jsx?v=53"></script>
+  <script type="text/babel" src="js/chat-shell.jsx?v=54"></script>
   <script type="text/babel" src="js/variations.jsx?v=52"></script>
-  <script type="text/babel" src="js/live-translator.jsx?v=52"></script>
-  <script type="text/babel" src="js/app-production.jsx?v=44"></script>
+  <script type="text/babel" src="js/live-translator.jsx?v=54"></script>
+  <script type="text/babel" src="js/app-production.jsx?v=54"></script>
 </body>
 </html>

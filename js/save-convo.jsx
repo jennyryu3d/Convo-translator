@@ -77,12 +77,12 @@ function SaveConvoSheet({ palette, dark, convo, target, native, mode = 'practice
   function doSave() {
     const entry = {
       id: 'saved-' + Date.now(),
-      title: (title || '제목 없는 대화').trim(),
+      title: (title || window.t('untitledConvo')).trim(),
       summary: summary.trim(),
-      partner: (title || '대화').trim(),
-      topic: summary.trim().slice(0, 60) || '저장된 대화',
+      partner: (title || window.t('convoWord')).trim(),
+      topic: summary.trim().slice(0, 60) || window.t('savedConvoTopic'),
       date: todayLabel(),
-      label: '저장됨',
+      label: window.t('savedLabel'),
       mode: mode === 'live' ? 'live' : 'practice',  // which screen produced it
       // Flatten: for each "them" message, keep it; if I picked one of its
       // suggestions, append my chosen reply as a "me" message so the saved
@@ -135,19 +135,19 @@ function SaveConvoSheet({ palette, dark, convo, target, native, mode = 'practice
           </div>
           <div>
             <div style={{ fontSize: 16, fontWeight: 700, color: c.ink, fontFamily: "'Chakra Petch', system-ui, sans-serif" }}>
-              {pendingNew ? '새 대화를 시작할까요?' : '이 대화를 저장할까요?'}
+              {pendingNew ? window.t('startNewQ') : window.t('saveThisQ')}
             </div>
-            <div style={{ fontSize: 11, color: c.ink3 }}>{pendingNew ? '현재 대화를 저장하거나, 저장 없이 새로 시작할 수 있어요' : '제목과 요약을 편집할 수 있어요 · 나중에 검색으로 찾기'}</div>
+            <div style={{ fontSize: 11, color: c.ink3 }}>{pendingNew ? window.t('startNewDesc') : window.t('saveThisDesc')}</div>
           </div>
         </div>
 
         {/* Title */}
         <div style={{ marginTop: 14 }}>
-          <label style={{ fontSize: 10, fontWeight: 800, letterSpacing: 0.6, textTransform: 'uppercase', color: c.ink3, fontFamily: "'Chakra Petch', system-ui, sans-serif" }}>제목</label>
+          <label style={{ fontSize: 10, fontWeight: 800, letterSpacing: 0.6, textTransform: 'uppercase', color: c.ink3, fontFamily: "'Chakra Petch', system-ui, sans-serif" }}>{window.t('titleLabel')}</label>
           <input
             value={title}
             onChange={e => setTitle(e.target.value)}
-            placeholder={loadingSummary ? '제목 생성 중…' : '예: 토마스와의 미팅'}
+            placeholder={loadingSummary ? window.t('titleGenerating') : window.t('titlePlaceholder')}
             style={{
               width: '100%', marginTop: 5, border: `1.5px solid ${c.divider}`, borderRadius: 12,
               padding: '10px 12px', fontSize: 14, color: c.ink, background: c.bg,
@@ -159,13 +159,13 @@ function SaveConvoSheet({ palette, dark, convo, target, native, mode = 'practice
         {/* Summary */}
         <div style={{ marginTop: 12 }}>
           <label style={{ fontSize: 10, fontWeight: 800, letterSpacing: 0.6, textTransform: 'uppercase', color: c.ink3, fontFamily: "'Chakra Petch', system-ui, sans-serif" }}>
-            요약 {loadingSummary && <span style={{ color: c.primary }}>· AI 작성 중…</span>}
+            {window.t('summaryLabel')} {loadingSummary && <span style={{ color: c.primary }}>· {window.t('aiWriting')}</span>}
           </label>
           <textarea
             value={summary}
             onChange={e => setSummary(e.target.value)}
             rows={4}
-            placeholder={loadingSummary ? '대화 내용을 요약하고 있어요…' : '대화 요약을 입력하세요'}
+            placeholder={loadingSummary ? window.t('summaryGenerating') : window.t('summaryPlaceholder')}
             style={{
               width: '100%', marginTop: 5, border: `1.5px solid ${c.divider}`, borderRadius: 12,
               padding: '10px 12px', fontSize: 13, color: c.ink, background: c.bg,
@@ -175,7 +175,7 @@ function SaveConvoSheet({ palette, dark, convo, target, native, mode = 'practice
         </div>
 
         <div style={{ fontSize: 11, color: c.ink3, marginTop: 8, lineHeight: 1.5 }}>
-          💬 {convo.length}개 메시지가 함께 저장돼요 · 영어 학습 자료로 다시 볼 수 있어요
+          {window.t('msgsSavedNote', { n: convo.length })}
         </div>
 
         {/* Actions */}
@@ -186,18 +186,18 @@ function SaveConvoSheet({ palette, dark, convo, target, native, mode = 'practice
             display: 'inline-flex', alignItems: 'center', gap: 5,
           }}>
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/></svg>
-            대화 삭제
+            {window.t('deleteConvo')}
           </button>
           <div style={{ flex: 1 }} />
           <button onClick={onDismiss} style={{
             padding: '12px 16px', borderRadius: 999, border: `1.5px solid ${c.divider}`, cursor: 'pointer',
             background: 'transparent', color: c.ink2, fontSize: 13, fontWeight: 700,
-          }}>{pendingNew ? '저장 안 함' : '나중에'}</button>
+          }}>{pendingNew ? window.t('dontSave') : window.t('later')}</button>
           <button onClick={doSave} style={{
             padding: '12px 22px', borderRadius: 999, border: 'none', cursor: 'pointer',
             background: c.primary, color: c.primaryInk, fontSize: 13, fontWeight: 800,
             boxShadow: `0 4px 12px ${c.primary}55`,
-          }}>저장</button>
+          }}>{window.t('save')}</button>
         </div>
 
         {/* Snooze auto-popup for today — only relevant when it auto-opened */}
@@ -206,7 +206,7 @@ function SaveConvoSheet({ palette, dark, convo, target, native, mode = 'practice
             <button onClick={onSnooze} style={{
               background: 'transparent', border: 'none', cursor: 'pointer',
               fontSize: 11, color: c.ink3, fontWeight: 600, textDecoration: 'underline',
-            }}>오늘 하루 자동으로 띄우지 않기</button>
+            }}>{window.t('dontShowToday')}</button>
           </div>
         )}
       </div>

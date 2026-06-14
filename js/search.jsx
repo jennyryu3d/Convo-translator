@@ -41,7 +41,7 @@ function SearchOverlay({ palette, dark, onClose, embedded = false, onJump, onOpe
 
   function deleteSaved(s) {
     if (!String(s.id).startsWith('saved-')) return;
-    if (window.confirm('이 대화를 삭제할까요? 되돌릴 수 없어요.')) {
+    if (window.confirm(window.t('deleteConfirm'))) {
       window.CT_SAVED.remove(s.id);  // dispatches ct-saved-changed → re-render
     }
   }
@@ -100,7 +100,7 @@ function SearchOverlay({ palette, dark, onClose, embedded = false, onJump, onOpe
           )}
         </span>
         <div style={{ fontSize: 15, fontWeight: 800, color: c.ink, fontFamily: "'Chakra Petch', system-ui, sans-serif" }}>
-          {isHistory ? '저장된 대화' : '대화 검색'}
+          {isHistory ? window.t('savedConvos') : window.t('searchConvos')}
         </div>
       </div>
 
@@ -114,7 +114,7 @@ function SearchOverlay({ palette, dark, onClose, embedded = false, onJump, onOpe
           width: 36, height: 36, borderRadius: 999, border: 'none',
           background: 'transparent', color: c.ink2, cursor: 'pointer', flexShrink: 0,
           display: 'flex', alignItems: 'center', justifyContent: 'center',
-        }} title="닫기">
+        }} title={window.t('close')}>
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
         </button>
         <div style={{
@@ -130,7 +130,7 @@ function SearchOverlay({ palette, dark, onClose, embedded = false, onJump, onOpe
             ref={inputRef}
             value={q}
             onChange={e => setQ(e.target.value)}
-            placeholder="대화 기록에서 한글·영어 검색…"
+            placeholder={window.t('searchPlaceholder')}
             style={{
               flex: 1, border: 'none', outline: 'none', background: 'transparent',
               fontSize: 14, color: c.ink, fontFamily: 'inherit',
@@ -153,7 +153,7 @@ function SearchOverlay({ palette, dark, onClose, embedded = false, onJump, onOpe
         background: c.surface, borderBottom: `1px solid ${c.divider}`,
         display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap',
       }}>
-        <span style={{ fontSize: 11, fontWeight: 800, color: c.ink3, letterSpacing: 0.4 }}>기간</span>
+        <span style={{ fontSize: 11, fontWeight: 800, color: c.ink3, letterSpacing: 0.4 }}>{window.t('period')}</span>
         <input
           type="date"
           value={dateFrom}
@@ -181,7 +181,7 @@ function SearchOverlay({ palette, dark, onClose, embedded = false, onJump, onOpe
           <button onClick={() => { setDateFrom(''); setDateTo(''); }} style={{
             border: 'none', cursor: 'pointer', background: c.divider, color: c.ink2,
             borderRadius: 999, padding: '4px 10px', fontSize: 11, fontWeight: 700,
-          }}>기간 해제</button>
+          }}>{window.t('clearPeriod')}</button>
         )}
       </div>
 
@@ -193,12 +193,12 @@ function SearchOverlay({ palette, dark, onClose, embedded = false, onJump, onOpe
           borderBottom: `1px solid ${c.divider}`,
           display: 'flex', alignItems: 'center', gap: 6,
         }}>
-          <FilterPill c={c} on={filter === 'all'}  onClick={() => setFilter('all')}  label="전체"  count={totalHits} />
-          <FilterPill c={c} on={filter === 'mine'} onClick={() => setFilter('mine')} label="내 말" />
-          <FilterPill c={c} on={filter === 'them'} onClick={() => setFilter('them')} label="상대 말" />
+          <FilterPill c={c} on={filter === 'all'}  onClick={() => setFilter('all')}  label={window.t('all')}  count={totalHits} />
+          <FilterPill c={c} on={filter === 'mine'} onClick={() => setFilter('mine')} label={window.t('mine')} />
+          <FilterPill c={c} on={filter === 'them'} onClick={() => setFilter('them')} label={window.t('theirs')} />
           <div style={{ flex: 1 }} />
           <span style={{ fontSize: 11, color: c.ink3 }}>
-            한글·영어 모두 검색
+            {window.t('searchAllNote')}
           </span>
         </div>
       )}
@@ -207,12 +207,12 @@ function SearchOverlay({ palette, dark, onClose, embedded = false, onJump, onOpe
       <div ref={bodyRef} style={{ flex: 1, minHeight: 0, overflowY: 'auto', padding: '12px 12px 20px' }}>
         {!q && (recent.length > 0
           ? <RecentList c={c} sessions={recent}
-              heading={isHistory ? '저장된 대화' : '최근 대화'}
+              heading={isHistory ? window.t('savedConvos') : window.t('recentConvos')}
               showTips={!isHistory}
               onDelete={deleteSaved}
               onPickSession={s => onOpenSession ? onOpenSession(s) : setQ((s.topic || s.partner || '').split(' ')[0])} />
           : (hasDateFilter
-              ? <EmptyResults c={c} q={dateFrom || dateTo ? '해당 기간' : ''} />
+              ? <EmptyResults c={c} q={dateFrom || dateTo ? window.t('thatPeriod') : ''} />
               : <NoSavedYet c={c} />)
         )}
         {q && grouped.length === 0 && <EmptyResults c={c} q={q} />}
@@ -258,11 +258,10 @@ function NoSavedYet({ c }) {
         <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>
       </div>
       <div style={{ fontSize: 14, fontWeight: 700, color: c.ink2, marginBottom: 6 }}>
-        아직 저장된 대화가 없어요
+        {window.t('noSavedYet')}
       </div>
       <div style={{ fontSize: 12, color: c.ink3, lineHeight: 1.6 }}>
-        대화를 나눈 뒤 <b style={{ color: c.primary }}>대화 저장</b>을 누르면<br/>
-        여기에서 한글·영어로 검색해 다시 찾을 수 있어요
+        {window.t('noSavedHintA')} <b style={{ color: c.primary }}>{window.t('saveConvoBold')}</b>{window.t('noSavedHintB')}
       </div>
     </div>
   );
@@ -274,12 +273,12 @@ function NoSavedYet({ c }) {
 function ModeAvatar({ c, mode, fallback }) {
   const base = { width: 38, height: 38, borderRadius: 12, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' };
   if (mode === 'live') return (
-    <div style={{ ...base, background: c.accent2 + '22', color: c.accent2 }} title="실시간 대화">
+    <div style={{ ...base, background: c.accent2 + '22', color: c.accent2 }} title={window.t('liveMode')}>
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M2 12h3l2.5-7 4 14 2.5-7H22"/></svg>
     </div>
   );
   if (mode === 'practice') return (
-    <div style={{ ...base, background: c.primarySoft, color: c.primary }} title="학습 모드">
+    <div style={{ ...base, background: c.primarySoft, color: c.primary }} title={window.t('learnMode')}>
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5z"/></svg>
     </div>
   );
@@ -322,7 +321,7 @@ function RecentList({ c, sessions, onPickSession, heading = '최근 대화', sho
                 </div>
               </button>
               {canDelete && (
-                <button onClick={() => onDelete(s)} title="삭제" style={{
+                <button onClick={() => onDelete(s)} title={window.t('delete')} style={{
                   width: 32, height: 32, borderRadius: 999, flexShrink: 0, border: 'none',
                   background: 'transparent', color: '#C0392B', cursor: 'pointer',
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -336,14 +335,13 @@ function RecentList({ c, sessions, onPickSession, heading = '최근 대화', sho
       </div>
       {showTips && (
         <>
-          <SectionHeader c={c} label="검색 팁" mt={20} />
+          <SectionHeader c={c} label={window.t('searchTips')} mt={20} />
           <div style={{
             background: c.surface, borderRadius: 12, padding: '12px 14px',
             border: `1px dashed ${c.divider}`,
             fontSize: 12, color: c.ink2, lineHeight: 1.7,
           }}>
-            한글 또는 영어로 자유롭게 검색하세요.<br />
-            제목·요약·대화 내용 모두 검색돼요.
+            {window.t('searchTipsBody')}
           </div>
         </>
       )}
@@ -368,10 +366,10 @@ function EmptyResults({ c, q }) {
     }}>
       <div style={{ fontSize: 36, opacity: 0.4, marginBottom: 8 }}>🔍</div>
       <div style={{ fontSize: 14, fontWeight: 700, color: c.ink2, marginBottom: 4 }}>
-        "{q}"와(과) 일치하는 결과가 없어요
+        {window.t('noMatch', { q })}
       </div>
       <div style={{ fontSize: 12, color: c.ink3, lineHeight: 1.5 }}>
-        다른 키워드를 시도해 보거나<br/>한글·영어 중 한 쪽으로 다시 검색해 보세요
+        {window.t('noMatchHint')}
       </div>
     </div>
   );
@@ -439,7 +437,7 @@ function ResultGroup({ c, group, q, onJump, onOpenSession }) {
         <div style={{
           fontSize: 10, fontWeight: 800, color: c.primary,
           background: c.primarySoft, padding: '2px 8px', borderRadius: 999,
-        }}>{group.hits.length}건</div>
+        }}>{window.t('hits', { n: group.hits.length })}</div>
       </button>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
         {group.hits.map((h, i) => (
@@ -471,7 +469,7 @@ function ResultRow({ c, hit, q, onJump }) {
             fontSize: 9, fontWeight: 800, letterSpacing: 0.5, textTransform: 'uppercase',
             color: accent, background: isMine ? c.primarySoft : c.bg,
             padding: '2px 6px', borderRadius: 4,
-          }}>{isMine ? '내 말' : '상대 말'}</span>
+          }}>{isMine ? window.t('mine') : window.t('theirs')}</span>
           <span style={{ fontSize: 10, color: c.ink3 }}>{hit.msg.time}</span>
         </div>
         <div style={{ fontSize: 13, color: c.ink, fontWeight: 500, lineHeight: 1.45, marginBottom: 3 }}>

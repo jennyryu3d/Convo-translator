@@ -35,7 +35,7 @@ function ApiKeyBanner() {
   function save() {
     const t = val.trim();
     if (!t.startsWith('sk-ant-')) {
-      alert('Anthropic API 키는 "sk-ant-..." 로 시작해요. 다시 확인해 주세요.');
+      alert(window.t('keyFormatAlert'));
       return;
     }
     window.CT_API.setKey(t);
@@ -46,19 +46,19 @@ function ApiKeyBanner() {
   // Headline + body depend on why the sheet opened.
   const NOTICE = {
     busy: {
-      tag: '잠시만요',
-      title: '지금 사용량이 많아요',
-      body: '요청이 한꺼번에 몰렸어요. 잠시 후 다시 시도해 주세요. 바로 계속하고 싶다면 본인 API 키를 쓸 수도 있어요.',
+      tag: window.t('rateTag'),
+      title: window.t('rateTitle'),
+      body: window.t('rateBody'),
     },
     down: {
-      tag: '연결 문제',
-      title: '잠시 연결이 원활하지 않아요',
-      body: '번역 서버에 일시적으로 연결하지 못했어요. 잠시 후 다시 시도해 주세요. 바로 계속하고 싶다면 본인 API 키를 쓸 수도 있어요.',
+      tag: window.t('connTag'),
+      title: window.t('connTitle'),
+      body: window.t('connBody'),
     },
     manual: {
-      tag: 'API 키 설정',
-      title: '내 Anthropic API 키 쓰기',
-      body: '평소엔 키 없이 번역돼요. 사용량이 몰릴 때를 대비해 본인 키를 넣어두면, 막히지 않고 본인 키로 번역됩니다. 키는 이 기기에만 저장돼요.',
+      tag: window.t('keyTag'),
+      title: window.t('keyTitle'),
+      body: window.t('keyBody'),
     },
   };
   const notice = NOTICE[reason] || NOTICE.manual;
@@ -95,19 +95,19 @@ function ApiKeyBanner() {
               padding: '10px 20px', borderRadius: 999, border: 'none', cursor: 'pointer',
               background: '#96CDB0', color: '#081B1B', fontSize: 13, fontWeight: 700,
               fontFamily: 'inherit',
-            }}>확인</button>
+            }}>{window.t('ok')}</button>
             <button onClick={() => setShowKeyInput(true)} style={{
               padding: '10px 16px', borderRadius: 999, border: 'none', cursor: 'pointer',
               background: 'transparent', color: '#487762', fontSize: 13, fontWeight: 600,
               fontFamily: 'inherit', textDecoration: 'underline',
-            }}>내 API 키 쓰기</button>
+            }}>{window.t('useMyKey')}</button>
           </div>
         ) : (
         <React.Fragment>
         <a href="https://console.anthropic.com/settings/keys" target="_blank" rel="noreferrer" style={{
           display: 'inline-block', fontSize: 12, color: '#487762', textDecoration: 'underline',
           marginBottom: 14,
-        }}>console.anthropic.com에서 키 발급받기 →</a>
+        }}>{window.t('getKeyLink')}</a>
         <input
           type="password"
           value={val}
@@ -125,17 +125,17 @@ function ApiKeyBanner() {
             padding: '10px 16px', borderRadius: 999, border: 'none', cursor: 'pointer',
             background: 'transparent', color: '#5f6b67', fontSize: 13, fontWeight: 600,
             fontFamily: 'inherit',
-          }}>나중에</button>
+          }}>{window.t('later')}</button>
           <button onClick={save} disabled={!val.trim()} style={{
             padding: '10px 20px', borderRadius: 999, border: 'none',
             background: val.trim() ? '#96CDB0' : '#dde4e1',
             color: val.trim() ? '#081B1B' : '#8d9a96',
             fontSize: 13, fontWeight: 700, cursor: val.trim() ? 'pointer' : 'default',
             fontFamily: 'inherit',
-          }}>저장</button>
+          }}>{window.t('save')}</button>
         </div>
         <div style={{ fontSize: 11, color: '#8d9a96', marginTop: 14, lineHeight: 1.5 }}>
-          🔒 키는 브라우저 localStorage에만 저장돼요. 공용 PC면 사용 후 설정에서 제거하세요.
+          {window.t('keyStorageNote')}
         </div>
         </React.Fragment>
         )}

@@ -64,7 +64,7 @@ window.CT_CONVO = [];
 // dark→dark). 'blue' is the default and matches the original palette.
 window.CT_SKINS = {
   blue: {
-    name: '블루', swatch: '#006898',
+    name: '블루', nameEn: 'Blue', swatch: '#006898',
     light: {
       primary: '#006898', primaryInk: '#FFFFFF', primarySoft: '#D6EAF3',
       mine: '#05A9CF', mineInk: '#002854',
@@ -90,7 +90,7 @@ window.CT_SKINS = {
     },
   },
   gold: {
-    name: '골드', swatch: '#F19502',
+    name: '골드', nameEn: 'Gold', swatch: '#F19502',
     light: {
       primary: '#F19502', primaryInk: '#FFFFFF', primarySoft: '#FFEDCA',
       mine: '#F6B24A', mineInk: '#3A2A00',
@@ -116,7 +116,7 @@ window.CT_SKINS = {
     },
   },
   rose: {
-    name: '로즈', swatch: '#DB7F8E',
+    name: '로즈', nameEn: 'Rose', swatch: '#DB7F8E',
     light: {
       primary: '#DB7F8E', primaryInk: '#FFFFFF', primarySoft: '#FFDBDA',
       mine: '#E89AA6', mineInk: '#4A2730',

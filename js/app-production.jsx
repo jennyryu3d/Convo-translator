@@ -16,8 +16,33 @@ const PROD_TWEAK_DEFAULTS = /*EDITMODE-BEGIN*/{
   "native": "KO"
 }/*EDITMODE-END*/;
 
+// In the deployed app there's no editor host listening, so useTweaks changes
+// would vanish on reload. Persist the user's choices (theme, languages, etc.)
+// to localStorage and merge them over the defaults on startup so they stick
+// until the user changes them again.
+const PROD_TWEAK_STORE = 'ct_prod_tweaks_v1';
+function loadProdTweaks() {
+  try {
+    const raw = localStorage.getItem(PROD_TWEAK_STORE);
+    const obj = raw ? JSON.parse(raw) : null;
+    return (obj && typeof obj === 'object') ? obj : {};
+  } catch (e) { return {}; }
+}
+function saveProdTweaks(edits) {
+  try {
+    localStorage.setItem(PROD_TWEAK_STORE, JSON.stringify({ ...loadProdTweaks(), ...edits }));
+  } catch (e) {}
+}
+
 function ProductionApp() {
-  const [tweaks, setTweak] = window.useTweaks(PROD_TWEAK_DEFAULTS);
+  const [tweaks, setTweakBase] = window.useTweaks({ ...PROD_TWEAK_DEFAULTS, ...loadProdTweaks() });
+  // Wrap setTweak so every change is also mirrored to localStorage.
+  const setTweak = React.useCallback((keyOrEdits, val) => {
+    const edits = (typeof keyOrEdits === 'object' && keyOrEdits !== null)
+      ? keyOrEdits : { [keyOrEdits]: val };
+    saveProdTweaks(edits);
+    setTweakBase(keyOrEdits, val);
+  }, [setTweakBase]);
   const dark = tweaks.theme === 'dark';
 
   // Lock body background to the active theme so mobile address bar / overscroll
