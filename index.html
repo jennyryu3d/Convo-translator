@@ -29,26 +29,32 @@
     /* fill viewport including iOS safe areas */
     #root { width: 100%; height: 100%; }
 
-    /* Loading splash — shown while Babel compiles the app; React replaces
-       #root's contents on mount, so this disappears automatically. */
+    /* Loading splash — the default screen in every state (first open, refresh,
+       anytime): blank with the app logo centered. React replaces #root's
+       contents on mount, so it disappears automatically once the app is ready. */
     #ct-splash {
       position: fixed; inset: 0; z-index: 1;
       display: flex; flex-direction: column;
-      align-items: center; justify-content: center; gap: 18px;
+      align-items: center; justify-content: center; gap: 14px;
       background: #F2F5F8;
     }
     #ct-splash .ct-mark {
-      width: 92px; height: 92px;
-      filter: drop-shadow(0 10px 24px rgba(32,59,55,0.18));
-      animation: ctSplashPulse 1.4s ease-in-out infinite;
+      width: 72px; height: 72px; border-radius: 18px;
+      box-shadow: 0 8px 22px rgba(8,27,27,0.18);
+      animation: ctSplashPulse 1.5s ease-in-out infinite;
     }
     #ct-splash .ct-word {
       font-family: 'Plus Jakarta Sans', -apple-system, system-ui, sans-serif;
-      font-weight: 800; font-size: 21px; letter-spacing: -0.3px; color: #203B37;
+      font-weight: 800; font-size: 20px; letter-spacing: -0.3px; color: #203B37;
+      margin-bottom: -8px;
+    }
+    #ct-splash .ct-msg {
+      font-family: 'Plus Jakarta Sans', -apple-system, system-ui, sans-serif;
+      font-size: 13px; font-weight: 600; color: #5f6f6a;
     }
     @keyframes ctSplashPulse {
-      0%, 100% { transform: scale(1); opacity: 0.85; }
-      50%      { transform: scale(1.06); opacity: 1; }
+      0%, 100% { transform: scale(1); opacity: 0.9; }
+      50%      { transform: scale(1.05); opacity: 1; }
     }
   </style>
 
@@ -70,17 +76,24 @@
   </template>
   <div id="root">
     <div id="ct-splash">
-      <svg class="ct-mark" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-        <rect width="200" height="200" rx="44" fill="#203B37"/>
-        <g transform="translate(60,60)">
-          <rect width="50" height="36" rx="10" fill="#96CDB0"/>
-          <path d="M10 36 L18 44 L22 36 Z" fill="#96CDB0"/>
-          <rect x="30" y="44" width="50" height="36" rx="10" fill="#EEE8B2"/>
-          <path d="M70 80 L62 88 L58 80 Z" fill="#EEE8B2"/>
-        </g>
-      </svg>
+      <img class="ct-mark" src="convotrans-design/assets/app-icon.png" alt="ConvoTrans" />
       <div class="ct-word">ConvoTrans</div>
+      <div class="ct-msg" id="ct-splash-msg">Loading…</div>
     </div>
+    <script>
+      // Caption explains the situation, in English. A fresh app open shows a
+      // welcome; an in-session refresh reassures you're on the latest version.
+      (function () {
+        try {
+          var fresh = !sessionStorage.getItem('ct_session');
+          sessionStorage.setItem('ct_session', '1');
+          var el = document.getElementById('ct-splash-msg');
+          if (el) el.textContent = fresh
+            ? 'Welcome — your live conversation translator'
+            : 'Loading the latest version…';
+        } catch (e) {}
+      })();
+    </script>
   </div>
 
   <script src="js/data.js?v=53"></script>
