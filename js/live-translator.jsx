@@ -77,6 +77,8 @@ function LiveTranslator({ tweaks, setTweak }) {
   }
   const target = tweaks.target || 'EN';
   const native = tweaks.native || 'KO';
+  // UI language: Korean if my language is Korean, otherwise English.
+  window.CT_LOCALE = native === 'KO' ? 'KO' : 'EN';
   const scrollRef = window.useDragScroll();
 
   React.useEffect(() => {
@@ -548,12 +550,12 @@ function MyBubbleStyled({ msg, palette, radius, shadow, fontScale }) {
         marginBottom: 4, marginRight: 8, textTransform: 'uppercase',
         display: 'flex', alignItems: 'center', gap: 5,
       }}>
-        나 · 전송됨
+        {window.t('meSent')}
         {msg.inputKind === 'clean' && (
-          <span style={{ fontSize: 9 * fontScale, color: c.accent2, fontWeight: 800, letterSpacing: 0.4 }}>· 그대로</span>
+          <span style={{ fontSize: 9 * fontScale, color: c.accent2, fontWeight: 800, letterSpacing: 0.4 }}>· {window.t('asIs')}</span>
         )}
         {isFixed && (
-          <span style={{ fontSize: 9 * fontScale, color: '#9B59E0', fontWeight: 800, letterSpacing: 0.4 }}>· ✏ 정정됨</span>
+          <span style={{ fontSize: 9 * fontScale, color: '#9B59E0', fontWeight: 800, letterSpacing: 0.4 }}>· {window.t('corrected')}</span>
         )}
       </div>
       <div style={{ maxWidth: '86%' }}>
@@ -583,7 +585,7 @@ function MyBubbleStyled({ msg, palette, radius, shadow, fontScale }) {
             </svg>
             <div style={{ flex: 1, minWidth: 0 }}>
               <div style={{ fontSize: 9 * fontScale, color: isFixed ? '#9B59E0' : c.ink3, fontWeight: 700, letterSpacing: 0.4, textTransform: 'uppercase', marginBottom: 1, display: 'inline-flex', alignItems: 'center', gap: 3 }}>
-                {isFixed ? '정정됨 · 내 입력' : '내 입력'}
+                {isFixed ? window.t('correctedMine') : window.t('myInput')}
               </div>
               <div style={isFixed ? { textDecoration: 'line-through wavy #9B59E055', textDecorationSkipInk: 'none' } : null}>
                 <TappableText text={msg.orig} lang="native" id={`me-${msg.id}-o`} />
@@ -616,7 +618,7 @@ function TheirBubbleStyled({ msg, palette, dark, children, radius, shadow, fontS
         <div style={{
           fontSize: 10 * fontScale, fontWeight: 800, color: c.ink2, letterSpacing: 0.6,
           textTransform: 'uppercase',
-        }}>상대방</div>
+        }}>{window.t('them')}</div>
       </div>
       <div style={{ maxWidth: '92%', width: '100%' }}>
         <div style={{
@@ -645,7 +647,7 @@ function TheirBubbleStyled({ msg, palette, dark, children, radius, shadow, fontS
                 <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
                   <rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/>
                 </svg>
-                번역
+                {window.t('translation')}
               </span>
             </div>
             <TappableText text={msg.trans} lang="native" id={`them-${msg.id}-t`} />
@@ -1077,7 +1079,7 @@ INPUT: ${text}`
           transition: 'color .15s',
         }}>
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 12h2l2-6 4 12 3-9 2 5h5"/></svg>
-          실시간 대화
+          {window.t('liveMode')}
         </button>
         <button onClick={() => onModeChange('practice')} style={{
           flex: 1, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 6,
@@ -1087,7 +1089,7 @@ INPUT: ${text}`
           transition: 'color .15s',
         }}>
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4z"/></svg>
-          학습 모드
+          {window.t('learnMode')}
         </button>
       </div>
 
@@ -1095,7 +1097,7 @@ INPUT: ${text}`
         /* LIVE: two speak buttons — both add to the main conversation */
         <div>
           <div style={{ fontSize: 10, color: c.ink3, marginBottom: 8, textAlign: 'center', lineHeight: 1.4 }}>
-            누가 말하는지 누른 뒤 말하세요 · {busy && <span style={{ color: c.primary, fontWeight: 700 }}>처리 중…</span>}
+            {window.t('whoSpeaksHint')} · {busy && <span style={{ color: c.primary, fontWeight: 700 }}>{window.t('processing')}</span>}
           </div>
           <div style={{ display: 'flex', gap: 8 }}>
             <button onClick={() => liveListen('me')} disabled={recSide === 'them' || busy} style={{
@@ -1107,7 +1109,7 @@ INPUT: ${text}`
               boxShadow: `0 3px 10px ${(c.meBtn || c.primary)}44`,
             }}>
               <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="9" y="3" width="6" height="12" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg>
-              <span style={{ fontSize: 13, fontWeight: 800 }}>{recSide === 'me' ? '듣는 중 · 탭하면 완료' : '내가 말하기'}</span>
+              <span style={{ fontSize: 13, fontWeight: 800 }}>{recSide === 'me' ? window.t('listeningTapDone') : window.t('iSpeak')}</span>
               <span style={{ fontSize: 9, opacity: 0.85 }}>{nativeLang.name} → {targetLang.name}</span>
             </button>
             <button onClick={() => liveListen('them')} disabled={recSide === 'me' || busy} style={{
@@ -1119,8 +1121,8 @@ INPUT: ${text}`
               boxShadow: `0 3px 10px ${(c.themBtn || c.accent2)}44`,
             }}>
               <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M6 8a6 6 0 0 1 12 0c0 4-3 5-3 8a3 3 0 0 1-6 0 3 3 0 0 1 3-3"/></svg>
-              <span style={{ fontSize: 13, fontWeight: 800 }}>{recSide === 'them' ? '듣는 중 · 탭하면 완료' : '상대방 말하기'}</span>
-              <span style={{ fontSize: 9, opacity: 0.85 }}>{targetLang.name} → 제안 3개</span>
+              <span style={{ fontSize: 13, fontWeight: 800 }}>{recSide === 'them' ? window.t('listeningTapDone') : window.t('theySpeak')}</span>
+              <span style={{ fontSize: 9, opacity: 0.85 }}>{targetLang.name} → {window.t('suggest3')}</span>
             </button>
           </div>
         </div>
@@ -1130,7 +1132,7 @@ INPUT: ${text}`
           <div style={{
             fontSize: 10, color: c.ink3, marginBottom: 6, paddingLeft: 4, lineHeight: 1.4,
           }}>
-            입력하면 AI가 상대역이 되어 답하고 다음 표현을 제안해요
+            {window.t('practiceHint')}
           </div>
           <div style={{
             background: c.bg, border: `1.5px solid ${c.primary}55`,
@@ -1142,7 +1144,7 @@ INPUT: ${text}`
               onChange={e => setRawInput(e.target.value)}
               onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSend(); } }}
               rows={1}
-              placeholder={`어떤 언어로 입력해도 ${targetLang.name}로 전송돼요…`}
+              placeholder={window.t('placeholderAnyLang', { lang: targetLang.name })}
               style={{
                 width: '100%', border: 'none', outline: 'none', background: 'transparent',
                 fontSize: 14 * fontScale, color: c.ink, fontFamily: 'inherit',
@@ -1159,13 +1161,13 @@ INPUT: ${text}`
                   color: inputKind === 'clean' ? c.accent2 : inputKind === 'polished' ? '#9B59E0' : c.primary,
                   letterSpacing: 0.4, textTransform: 'uppercase', marginTop: 4, flexShrink: 0,
                 }}>
-                  {inputKind === 'clean' ? `✓ ${targetLang.code} 그대로` : inputKind === 'polished' ? `✏ ${targetLang.code} 정정` : `→ ${targetLang.code} 번역`}
+                  {inputKind === 'clean' ? window.t('tagAsIs', { code: targetLang.code }) : inputKind === 'polished' ? window.t('tagFix', { code: targetLang.code }) : window.t('tagTranslate', { code: targetLang.code })}
                 </span>
                 <div style={{
                   flex: 1, fontSize: 14 * fontScale, color: preview ? c.ink : c.ink3,
                   fontWeight: 500, lineHeight: 1.4, padding: '2px 0', fontStyle: preview ? 'normal' : 'italic',
                 }}>
-                  {preview || (translating ? '자동 처리 중…' : '입력하면 자동 번역됩니다')}
+                  {preview || (translating ? window.t('autoProcessing') : window.t('autoTranslateHint'))}
                 </div>
               </div>
             )}
@@ -1176,7 +1178,7 @@ INPUT: ${text}`
                 color: recSide === 'me' ? '#fff' : (c.micBtnInk || '#fff'), cursor: 'pointer', flexShrink: 0,
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
                 animation: recSide === 'me' ? 'micPulse 1.1s infinite' : 'none',
-              }} title={`${nativeLang.name} 음성 입력`}>
+              }} title={window.t('voiceInput', { lang: nativeLang.name })}>
                 {I.mic}
               </button>
               <button onClick={handleSend} disabled={!preview} style={{
@@ -1186,7 +1188,7 @@ INPUT: ${text}`
                 color: preview ? (c.sendBtnInk || c.primaryInk) : c.ink3,
                 fontSize: 13, fontWeight: 800, cursor: preview ? 'pointer' : 'default',
               }}>
-                {targetLang.name}로 보내기 {I.send}
+                {window.t('sendTo', { lang: targetLang.name })} {I.send}
               </button>
             </div>
           </div>

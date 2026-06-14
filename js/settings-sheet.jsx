@@ -1,9 +1,9 @@
 // App version + settings sheet (bottom-sheet) showing version info.
 window.CT_VERSION = {
-  number: '1.3.3',
-  build: '2026.06.13d',
+  number: '1.4.0',
+  build: '2026.06.14',
   label: 'Beta',
-  notes: '실시간 "내가 말하기" 후 자동 음성출력 끔(스피커 버튼으로 수동 재생) · 음성 중복 수정 · 저장 대화 모드 아이콘 구분',
+  notes: '다국어 UI 1차: 내 언어가 한국어가 아니면 메인 대화 화면이 영어로 전환 · 자동 음성출력 끔 · 음성 중복 수정 · 저장 대화 모드 아이콘',
 };
 
 function SettingsSheet({ palette, dark, onClose, target, native, skinId = 'blue', onPickSkin }) {

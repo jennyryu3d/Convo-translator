@@ -172,8 +172,8 @@ function SuggCardDeck({ palette, suggestions, dark, max = 3, onPick, pickedIdx =
           fontSize: 10, fontWeight: 800, color: c.ai, letterSpacing: 0.6,
           textTransform: 'uppercase',
         }}>
-          {sparkleIcon} AI 제안 · {idx + 1}/{list.length}
-          {anyPicked && <span style={{ color: c.accent2, marginLeft: 4 }}>· 선택됨</span>}
+          {sparkleIcon} {window.t('aiSuggestion')} · {idx + 1}/{list.length}
+          {anyPicked && <span style={{ color: c.accent2, marginLeft: 4 }}>· {window.t('selected')}</span>}
         </span>
         <div style={{ display: 'flex', gap: 4 }}>
           {list.map((_, i) => (
@@ -213,7 +213,7 @@ function SuggCardDeck({ palette, suggestions, dark, max = 3, onPick, pickedIdx =
               color: cardInk, opacity: 0.85, marginBottom: 6,
             }}>
               <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12l5 5 9-11"/></svg>
-              내가 선택한 답변
+              {window.t('myChosenReply')}
             </div>
           )}
           <div style={{
@@ -234,7 +234,7 @@ function SuggCardDeck({ palette, suggestions, dark, max = 3, onPick, pickedIdx =
               flexShrink: 0, width: 30, height: 30, borderRadius: 999, border: 'none', cursor: 'pointer',
               background: isPicked ? 'rgba(0,40,84,0.12)' : 'rgba(255,255,255,0.18)',
               color: cardInk, display: 'flex', alignItems: 'center', justifyContent: 'center',
-            }} title="듣기" aria-label="듣기">
+            }} title={window.t('listen')} aria-label={window.t('listen')}>
               <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 5L6 9H2v6h4l5 4V5z"/><path d="M15.5 8.5a4 4 0 0 1 0 7"/><path d="M19 5a8 8 0 0 1 0 14"/></svg>
             </button>
           </div>
@@ -253,7 +253,7 @@ function SuggCardDeck({ palette, suggestions, dark, max = 3, onPick, pickedIdx =
           background: 'transparent', color: '#fff', opacity: idx === 0 ? 0.3 : 1,
           display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
           filter: idx === 0 ? 'none' : 'drop-shadow(0 0 5px rgba(255,255,255,0.9))',
-        }} aria-label="이전 답변">
+        }} aria-label={window.t('prev')}>
           <svg width="25" height="25" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" strokeWidth="3.6" strokeLinecap="round" strokeLinejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
         </button>
 
@@ -266,7 +266,7 @@ function SuggCardDeck({ palette, suggestions, dark, max = 3, onPick, pickedIdx =
             fontSize: 14, fontWeight: 800, letterSpacing: '0.01em',
             display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7,
           }}>
-          {isPicked ? '선택한 답변' : locked ? '지난 제안' : '이 답변 사용하기'}
+          {isPicked ? window.t('selectedReply') : locked ? window.t('pastSuggestion') : window.t('useReply')}
           {!locked && !isPicked && (
             <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14m-5-5 5 5-5 5"/></svg>
           )}
@@ -280,7 +280,7 @@ function SuggCardDeck({ palette, suggestions, dark, max = 3, onPick, pickedIdx =
           background: 'transparent', color: '#fff', opacity: idx === list.length - 1 ? 0.3 : 1,
           display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
           filter: idx === list.length - 1 ? 'none' : 'drop-shadow(0 0 5px rgba(255,255,255,0.9))',
-        }} aria-label="다음 답변">
+        }} aria-label={window.t('next')}>
           <svg width="25" height="25" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" strokeWidth="3.6" strokeLinecap="round" strokeLinejoin="round"><path d="M9 18l6-6-6-6"/></svg>
         </button>
       </div>
