@@ -1,11 +1,11 @@
 // App version + settings sheet (bottom-sheet) showing version info.
 window.CT_VERSION = {
-  number: '1.4.4',
+  number: '1.4.5',
   build: '2026.06.15',
   label: 'Beta',
   notes: {
-    KO: 'API 비용 최적화: 학습 번역은 입력 후 1회만 · 단어 탭 번역 캐시 · 저장 자동안내는 사용 시에만 요약 생성 · 개인정보 처리방침 추가',
-    EN: 'API cost tuning: learn-mode translates once on tap · word-tap cache · save nudge generates summary only when used · added a privacy policy',
+    KO: '새 대화 확인창을 앱 디자인에 맞춘 중앙 모달(로고 포함)로 변경 · API 비용 최적화 · 개인정보 처리방침 추가',
+    EN: 'New-conversation confirm is now a branded centered dialog (with logo) · API cost tuning · added a privacy policy',
   },
 };
 

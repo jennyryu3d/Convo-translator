@@ -76,6 +76,7 @@ function LiveTranslator({ tweaks, setTweak }) {
   const [saveOpen, setSaveOpen] = React.useState(false);
   const [saveAuto, setSaveAuto] = React.useState(false); // did the save sheet auto-open?
   const [pendingNew, setPendingNew] = React.useState(false); // save sheet opened via "새 대화"
+  const [confirmNew, setConfirmNew] = React.useState(false); // styled "start new conversation?" modal
   const [viewSession, setViewSession] = React.useState(null); // saved session opened read-only
   const [wordPop, setWordPop] = React.useState(null); // { term, translation, loading, x, y } | null
   const promptedRef = React.useRef(false);   // only auto-prompt once per conversation
@@ -145,10 +146,9 @@ function LiveTranslator({ tweaks, setTweak }) {
   // reset.
   function handleNewConversation() {
     if (!convo.length) { startNewConversation(); return; }
-    // Just clear — no save sheet (the bookmark button handles saving).
-    // A light confirm prevents accidental loss of an unsaved conversation.
-    const ok = window.confirm(window.t('clearAndRestart'));
-    if (ok) startNewConversation();
+    // Styled confirm (not the native window.confirm, which shows the page URL
+    // and looks unbranded) prevents accidental loss of an unsaved conversation.
+    setConfirmNew(true);
   }
 
   function nowStamp() {
@@ -546,6 +546,13 @@ function LiveTranslator({ tweaks, setTweak }) {
         onCancel={() => setPendingMode(null)}
       />
     )}
+    {confirmNew && (
+      <NewConvoConfirm
+        palette={c}
+        onConfirm={() => { startNewConversation(); setConfirmNew(false); }}
+        onCancel={() => setConfirmNew(false)}
+      />
+    )}
     {skinToast && (
       <div style={{
         position: 'fixed', left: '50%', bottom: 90, transform: 'translateX(-50%)',
@@ -771,6 +778,47 @@ function ModeSwitchConfirm({ palette, toMode, onKeep, onClear, onCancel }) {
             background: 'transparent', color: '#C0392B', border: `1.5px solid ${c.divider}`,
             fontSize: 14, fontWeight: 800,
           }}>{window.t('clearAndSwitch')}</button>
+          <button onClick={onCancel} style={{
+            height: 40, borderRadius: 999, border: 'none', cursor: 'pointer',
+            background: 'transparent', color: c.ink3, fontSize: 13, fontWeight: 700,
+          }}>{window.t('cancel')}</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Branded, centered "start a new conversation?" confirm — replaces the native
+// window.confirm (which leaks the page URL and looks like dev mode). Small logo
+// on top for a designed feel.
+function NewConvoConfirm({ palette, onConfirm, onCancel }) {
+  const c = palette;
+  return (
+    <div onClick={onCancel} style={{
+      position: 'fixed', inset: 0, zIndex: 320,
+      background: 'rgba(0,18,38,0.45)', backdropFilter: 'blur(2px)',
+      display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24,
+    }}>
+      <div onClick={e => e.stopPropagation()} style={{
+        background: c.surface, borderRadius: 20, padding: '22px 20px 16px',
+        maxWidth: 320, width: '100%', textAlign: 'center',
+        boxShadow: '0 20px 48px rgba(0,18,38,0.3)',
+      }}>
+        <img src="convotrans-design/assets/app-icon.png" alt="ConvoTrans" style={{
+          width: 44, height: 44, borderRadius: 12, display: 'block', margin: '0 auto 12px',
+          boxShadow: '0 4px 12px rgba(8,27,27,0.18)',
+        }} />
+        <div style={{ fontSize: 16, fontWeight: 800, color: c.ink, marginBottom: 6, fontFamily: "'Chakra Petch', system-ui, sans-serif" }}>
+          {window.t('startNewQ')}
+        </div>
+        <div style={{ fontSize: 13, color: c.ink2, lineHeight: 1.55, marginBottom: 18 }}>
+          {window.t('clearAndRestart')}
+        </div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+          <button onClick={onConfirm} style={{
+            height: 44, borderRadius: 999, border: 'none', cursor: 'pointer',
+            background: c.primary, color: c.primaryInk, fontSize: 14, fontWeight: 800,
+          }}>{window.t('startFresh')}</button>
           <button onClick={onCancel} style={{
             height: 40, borderRadius: 999, border: 'none', cursor: 'pointer',
             background: 'transparent', color: c.ink3, fontSize: 13, fontWeight: 700,
