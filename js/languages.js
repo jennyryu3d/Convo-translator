@@ -44,6 +44,7 @@ window.CT_UI = {
     placeholderAnyLang: "Type in any language — it's sent as {lang}…",
     tagAsIs: '✓ {code} as-is', tagFix: '✏ {code} fix', tagTranslate: '→ {code} translate',
     autoProcessing: 'Auto-processing…', autoTranslateHint: 'Translates automatically as you type',
+    translateBtn: 'Translate', manualTranslateHint: 'Tap Translate when you’re done typing',
     voiceInput: '{lang} voice input', sendTo: 'Send as {lang}',
     // Settings
     version: 'Version', build: 'Build', convoLanguage: 'Conversation language',
@@ -119,6 +120,7 @@ window.CT_UI = {
     placeholderAnyLang: '어떤 언어로 입력해도 {lang}로 전송돼요…',
     tagAsIs: '✓ {code} 그대로', tagFix: '✏ {code} 정정', tagTranslate: '→ {code} 번역',
     autoProcessing: '자동 처리 중…', autoTranslateHint: '입력하면 자동 번역됩니다',
+    translateBtn: '번역', manualTranslateHint: '다 입력한 뒤 번역을 누르세요',
     voiceInput: '{lang} 음성 입력', sendTo: '{lang}로 보내기',
     // Settings
     version: '버전', build: '빌드', convoLanguage: '대화 언어',

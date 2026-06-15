@@ -1,11 +1,11 @@
 // App version + settings sheet (bottom-sheet) showing version info.
 window.CT_VERSION = {
-  number: '1.4.2',
+  number: '1.4.3',
   build: '2026.06.15',
   label: 'Beta',
   notes: {
-    KO: '개인정보 처리방침 추가(설정에서 보기) · 로딩 화면 정리 · 설정·언어·테마 유지 · 30분 후 새 대화',
-    EN: 'Added a privacy policy (see Settings) · cleaner loading screen · settings/language/theme persist · fresh chat after 30 min',
+    KO: '학습 모드: 타이핑 중 자동번역 → 다 입력한 뒤 “번역” 1회로 변경(API 비용 절감) · 개인정보 처리방침 추가 · 로딩 화면 정리',
+    EN: 'Learn mode: translate once on tap instead of live-as-you-type (cuts API cost) · added a privacy policy · cleaner loading screen',
   },
 };
 
