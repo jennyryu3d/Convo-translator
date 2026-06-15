@@ -1,11 +1,11 @@
 // App version + settings sheet (bottom-sheet) showing version info.
 window.CT_VERSION = {
-  number: '1.4.5',
+  number: '1.4.6',
   build: '2026.06.15',
   label: 'Beta',
   notes: {
-    KO: '새 대화 확인창을 앱 디자인에 맞춘 중앙 모달(로고 포함)로 변경 · API 비용 최적화 · 개인정보 처리방침 추가',
-    EN: 'New-conversation confirm is now a branded centered dialog (with logo) · API cost tuning · added a privacy policy',
+    KO: '앱 첫 화면을 실시간 대화 모드로 변경 · 새 대화 확인창을 디자인 모달로 변경 · API 비용 최적화',
+    EN: 'Home now opens in live conversation mode · branded new-conversation dialog · API cost tuning',
   },
 };
 

@@ -66,7 +66,7 @@ function LiveTranslator({ tweaks, setTweak }) {
     } catch (e) {}
     return [];
   });
-  const [appMode, setAppMode] = React.useState('practice'); // 'practice' | 'live'
+  const [appMode, setAppMode] = React.useState('live'); // 'practice' | 'live' — home opens in live mode
   const [pendingMode, setPendingMode] = React.useState(null); // mode-switch confirm
   const [skinToast, setSkinToast] = React.useState(null); // brief "applied" message
   const [searchOpen, setSearchOpen] = React.useState(false);
