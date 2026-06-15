@@ -1,11 +1,11 @@
 // App version + settings sheet (bottom-sheet) showing version info.
 window.CT_VERSION = {
-  number: '1.4.8',
+  number: '1.4.9',
   build: '2026.06.15',
   label: 'Beta',
   notes: {
-    KO: '학습 모드: 버튼 한 번이면 번역되어 바로 전송(두 번 누르기 제거) · 상단 공유 버튼 · 첫 화면 실시간 대화 모드',
-    EN: 'Learn mode: one tap translates and sends (no more double-tap) · header share button · home opens in live mode',
+    KO: '설정에 개발자(Jenny Ryu) 표기 · 개인정보 처리방침 업데이트(전 연령 이용, 문의 이메일) · 한 번 탭 번역·전송',
+    EN: 'Developer credit (Jenny Ryu) in settings · privacy policy updated (all ages, contact email) · one-tap translate & send',
   },
 };
 
@@ -62,6 +62,7 @@ function SettingsSheet({ palette, dark, onClose, target, native, skinId = 'blue'
           <Row c={c} label={window.t('myNativeLang')} value={`${nat.name} (${nat.code})`} />
           <Row c={c} label={window.t('speechRecognition')} value={sttOK ? window.t('supported') : window.t('unsupportedBrowser')} ok={sttOK} />
           <Row c={c} label={window.t('apiConnection')} value={!window.CT_API.needsKey() ? window.t('designEnv') : (window.CT_API.getKey() ? window.t('connectedMyKey') : window.t('serverConnected'))} ok />
+          <Row c={c} label={window.t('developer')} value="Jenny Ryu" />
           <div style={{
             display: 'flex', alignItems: 'center', justifyContent: 'space-between',
             padding: '12px 6px',
