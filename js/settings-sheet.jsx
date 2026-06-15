@@ -1,11 +1,11 @@
 // App version + settings sheet (bottom-sheet) showing version info.
 window.CT_VERSION = {
-  number: '1.4.7',
+  number: '1.4.8',
   build: '2026.06.15',
   label: 'Beta',
   notes: {
-    KO: '상단에 공유 버튼 추가(친구에게 바로 공유) · 첫 화면 실시간 대화 모드 · 새 대화 디자인 모달',
-    EN: 'Added a share button in the header (share with a friend instantly) · home opens in live mode · branded new-conversation dialog',
+    KO: '학습 모드: 버튼 한 번이면 번역되어 바로 전송(두 번 누르기 제거) · 상단 공유 버튼 · 첫 화면 실시간 대화 모드',
+    EN: 'Learn mode: one tap translates and sends (no more double-tap) · header share button · home opens in live mode',
   },
 };
 
