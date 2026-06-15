@@ -1015,6 +1015,7 @@ function LiveInput({ palette, dark, fontScale = 1, appMode = 'practice', onModeC
   // PRACTICE mic: my native voice → fills text input.
   async function practiceMic() {
     if (recSide === 'me' && recRef.current) { recRef.current.stop(); return; }
+    setPreview(''); setInputKind('foreign');  // new voice input → re-translate before sending
     const rec = await window.CT_RECOGNIZE.startWithPermission(nativeLang.locale, {
       // continuous: keep recording through pauses; user taps the mic again to stop.
       continuous: true,
@@ -1036,17 +1037,22 @@ function LiveInput({ palette, dark, fontScale = 1, appMode = 'practice', onModeC
     }
   }, [rawInput]);
 
-  // Practice: debounced translate/polish of my input → target.
-  React.useEffect(() => {
-    if (isLive) return;
+  // Switching mode or target language drops any stale preview so we never send
+  // a translation that no longer matches the current settings.
+  React.useEffect(() => { setPreview(''); setInputKind('foreign'); }, [target, isLive]);
+
+  // Practice: translate/polish my input → target. Runs ONCE when I ask for it
+  // (Translate button or Enter), NOT on every keystroke — this is the cost
+  // lever: one API call per finished message instead of one per typing pause.
+  async function runTranslate() {
+    if (isLive || translating) return;
     const text = rawInput.trim();
-    if (!text) { setPreview(''); setTranslating(false); setInputKind('foreign'); return; }
+    if (!text) return;
     setTranslating(true);
-    const t = setTimeout(async () => {
-      try {
-        const targetName = targetLang.native;
-        const res = await window.CT_API.complete(
-          `You are a translation + editing assistant. The message will be sent to a NATIVE ${targetName} speaker, so the output MUST be fully correct, natural, native-level ${targetName}.
+    try {
+      const targetName = targetLang.native;
+      const res = await window.CT_API.complete(
+        `You are a translation + editing assistant. The message will be sent to a NATIVE ${targetName} speaker, so the output MUST be fully correct, natural, native-level ${targetName}.
 Decide the kind and produce "out":
 - If the input is in another language → translate it into natural ${targetName}. kind = "translate".
 - If the input is already in ${targetName} but has ANY grammar mistakes, awkward wording, wrong word choice, or anything a native speaker would not say (or could misunderstand) → REWRITE it into correct, natural, native-level ${targetName}. kind = "polish".
@@ -1055,22 +1061,22 @@ Preserve the speaker's original meaning and tone; do not add new information.
 Output one-line JSON only, no markdown: {"kind":"polish"|"translate"|"clean","out":"<final ${targetName}>"}
 
 INPUT: ${text}`
-        );
-        const raw = String(res).trim().replace(/^```json\s*/i, '').replace(/```\s*$/, '');
-        let parsed = null;
-        try { parsed = JSON.parse(raw); } catch (e) {}
-        if (parsed && parsed.out) {
-          setPreview(parsed.out);
-          setInputKind(parsed.kind === 'translate' ? 'foreign' : parsed.kind === 'polish' ? 'polished' : 'clean');
-        } else { setPreview(raw.replace(/^["'`]|["'`]$/g, '')); setInputKind('foreign'); }
-      } catch (e) { setPreview(window.t('transPreparing')); setInputKind('foreign'); }
-      finally { setTranslating(false); }
-    }, 600);
-    return () => clearTimeout(t);
-  }, [rawInput, target, isLive]);
+      );
+      const raw = String(res).trim().replace(/^```json\s*/i, '').replace(/```\s*$/, '');
+      let parsed = null;
+      try { parsed = JSON.parse(raw); } catch (e) {}
+      if (parsed && parsed.out) {
+        setPreview(parsed.out);
+        setInputKind(parsed.kind === 'translate' ? 'foreign' : parsed.kind === 'polish' ? 'polished' : 'clean');
+      } else { setPreview(raw.replace(/^["'`]|["'`]$/g, '')); setInputKind('foreign'); }
+    } catch (e) { setPreview(window.t('transPreparing')); setInputKind('foreign'); }
+    finally { setTranslating(false); }
+  }
 
+  // Two-stage: first Enter/tap translates; once a preview exists, it sends.
   function handleSend() {
-    if (!rawInput.trim() || !preview) return;
+    if (!rawInput.trim() || translating) return;
+    if (!preview) { runTranslate(); return; }
     onSendMine(rawInput, preview, inputKind);
     setRawInput(''); setPreview(''); setInputKind('foreign');
   }
@@ -1154,7 +1160,7 @@ INPUT: ${text}`
             <textarea
               ref={taRef}
               value={rawInput}
-              onChange={e => setRawInput(e.target.value)}
+              onChange={e => { setRawInput(e.target.value); if (preview) { setPreview(''); setInputKind('foreign'); } }}
               onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSend(); } }}
               rows={1}
               placeholder={window.t('placeholderAnyLang', { lang: targetLang.name })}
@@ -1180,7 +1186,7 @@ INPUT: ${text}`
                   flex: 1, fontSize: 14 * fontScale, color: preview ? c.ink : c.ink3,
                   fontWeight: 500, lineHeight: 1.4, padding: '2px 0', fontStyle: preview ? 'normal' : 'italic',
                 }}>
-                  {preview || (translating ? window.t('autoProcessing') : window.t('autoTranslateHint'))}
+                  {preview || (translating ? window.t('autoProcessing') : window.t('manualTranslateHint'))}
                 </div>
               </div>
             )}
@@ -1194,14 +1200,18 @@ INPUT: ${text}`
               }} title={window.t('voiceInput', { lang: nativeLang.name })}>
                 {I.mic}
               </button>
-              <button onClick={handleSend} disabled={!preview} style={{
+              <button onClick={handleSend} disabled={!rawInput.trim() || translating} style={{
                 flex: 1, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 5,
                 height: 38, borderRadius: 999, border: 'none',
-                background: preview ? (c.sendBtn || c.primary) : c.divider,
-                color: preview ? (c.sendBtnInk || c.primaryInk) : c.ink3,
-                fontSize: 13, fontWeight: 800, cursor: preview ? 'pointer' : 'default',
+                background: (rawInput.trim() && !translating) ? (c.sendBtn || c.primary) : c.divider,
+                color: (rawInput.trim() && !translating) ? (c.sendBtnInk || c.primaryInk) : c.ink3,
+                fontSize: 13, fontWeight: 800, cursor: (rawInput.trim() && !translating) ? 'pointer' : 'default',
               }}>
-                {window.t('sendTo', { lang: targetLang.name })} {I.send}
+                {translating
+                  ? window.t('translating')
+                  : preview
+                    ? <>{window.t('sendTo', { lang: targetLang.name })} {I.send}</>
+                    : window.t('translateBtn')}
               </button>
             </div>
           </div>
