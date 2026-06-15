@@ -1117,10 +1117,10 @@ function LiveInput({ palette, dark, fontScale = 1, appMode = 'practice', onModeC
   // a translation that no longer matches the current settings.
   React.useEffect(() => { setPreview(''); setInputKind('foreign'); }, [target, isLive]);
 
-  // Practice: translate/polish my input → target. Runs ONCE when I ask for it
-  // (Translate button or Enter), NOT on every keystroke — this is the cost
-  // lever: one API call per finished message instead of one per typing pause.
-  async function runTranslate() {
+  // Practice: ONE tap = translate/polish my input → target → send it straight to
+  // the conversation. Still a single API call per finished message (the cost
+  // lever: no per-keystroke calls), with no separate review/confirm step.
+  async function handleSend() {
     if (isLive || translating) return;
     const text = rawInput.trim();
     if (!text) return;
@@ -1141,20 +1141,20 @@ INPUT: ${text}`
       const raw = String(res).trim().replace(/^```json\s*/i, '').replace(/```\s*$/, '');
       let parsed = null;
       try { parsed = JSON.parse(raw); } catch (e) {}
+      let out, kind;
       if (parsed && parsed.out) {
-        setPreview(parsed.out);
-        setInputKind(parsed.kind === 'translate' ? 'foreign' : parsed.kind === 'polish' ? 'polished' : 'clean');
-      } else { setPreview(raw.replace(/^["'`]|["'`]$/g, '')); setInputKind('foreign'); }
-    } catch (e) { setPreview(window.t('transPreparing')); setInputKind('foreign'); }
-    finally { setTranslating(false); }
-  }
-
-  // Two-stage: first Enter/tap translates; once a preview exists, it sends.
-  function handleSend() {
-    if (!rawInput.trim() || translating) return;
-    if (!preview) { runTranslate(); return; }
-    onSendMine(rawInput, preview, inputKind);
-    setRawInput(''); setPreview(''); setInputKind('foreign');
+        out = parsed.out;
+        kind = parsed.kind === 'translate' ? 'foreign' : parsed.kind === 'polish' ? 'polished' : 'clean';
+      } else {
+        out = raw.replace(/^["'`]|["'`]$/g, '');
+        kind = 'foreign';
+      }
+      if (out) { onSendMine(rawInput, out, kind); setRawInput(''); setPreview(''); setInputKind('foreign'); }
+    } catch (e) {
+      // Translation failed — keep the text so the user can retry.
+    } finally {
+      setTranslating(false);
+    }
   }
 
   return (
@@ -1236,7 +1236,7 @@ INPUT: ${text}`
             <textarea
               ref={taRef}
               value={rawInput}
-              onChange={e => { setRawInput(e.target.value); if (preview) { setPreview(''); setInputKind('foreign'); } }}
+              onChange={e => setRawInput(e.target.value)}
               onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSend(); } }}
               rows={1}
               placeholder={window.t('placeholderAnyLang', { lang: targetLang.name })}
@@ -1246,26 +1246,6 @@ INPUT: ${text}`
                 padding: '4px 0', resize: 'none', minHeight: 22, lineHeight: 1.4,
               }}
             />
-            {(rawInput.trim() || preview) && (
-              <div style={{
-                marginTop: 6, paddingTop: 6, borderTop: `1px dashed ${c.divider}`,
-                display: 'flex', alignItems: 'flex-start', gap: 6,
-              }}>
-                <span style={{
-                  fontSize: 9, fontWeight: 800,
-                  color: inputKind === 'clean' ? c.accent2 : inputKind === 'polished' ? '#9B59E0' : c.primary,
-                  letterSpacing: 0.4, textTransform: 'uppercase', marginTop: 4, flexShrink: 0,
-                }}>
-                  {inputKind === 'clean' ? window.t('tagAsIs', { code: targetLang.code }) : inputKind === 'polished' ? window.t('tagFix', { code: targetLang.code }) : window.t('tagTranslate', { code: targetLang.code })}
-                </span>
-                <div style={{
-                  flex: 1, fontSize: 14 * fontScale, color: preview ? c.ink : c.ink3,
-                  fontWeight: 500, lineHeight: 1.4, padding: '2px 0', fontStyle: preview ? 'normal' : 'italic',
-                }}>
-                  {preview || (translating ? window.t('autoProcessing') : window.t('manualTranslateHint'))}
-                </div>
-              </div>
-            )}
             <div style={{ marginTop: 8, display: 'flex', alignItems: 'center', gap: 8 }}>
               <button onClick={practiceMic} style={{
                 width: 38, height: 38, borderRadius: 999, border: 'none',
@@ -1285,9 +1265,7 @@ INPUT: ${text}`
               }}>
                 {translating
                   ? window.t('translating')
-                  : preview
-                    ? <>{window.t('sendTo', { lang: targetLang.name })} {I.send}</>
-                    : window.t('translateBtn')}
+                  : <>{window.t('sendTo', { lang: targetLang.name })} {I.send}</>}
               </button>
             </div>
           </div>
