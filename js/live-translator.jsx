@@ -155,11 +155,15 @@ function LiveTranslator({ tweaks, setTweak }) {
   // that support it; copy the link to the clipboard as a fallback.
   async function handleShare() {
     const url = 'https://convotrans.jennyryu3d.com';
+    const text = window.t('shareText');
+    // Native share sheet: the recipient gets the intro line + the link together
+    // (apps render text then url).
     if (navigator.share) {
-      try { await navigator.share({ title: 'ConvoTrans', text: window.t('shareText'), url }); return; }
+      try { await navigator.share({ title: 'ConvoTrans', text, url }); return; }
       catch (e) { if (e && e.name === 'AbortError') return; /* else fall through to copy */ }
     }
-    try { await navigator.clipboard.writeText(url); setSkinToast(window.t('linkCopied')); }
+    // Fallback (desktop): copy the intro AND the link so both travel together.
+    try { await navigator.clipboard.writeText(`${text}\n${url}`); setSkinToast(window.t('linkCopied')); }
     catch (e) { setSkinToast(url); }
     setTimeout(() => setSkinToast(null), 1800);
   }
