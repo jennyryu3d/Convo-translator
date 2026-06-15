@@ -80,6 +80,7 @@ function LiveTranslator({ tweaks, setTweak }) {
   const [wordPop, setWordPop] = React.useState(null); // { term, translation, loading, x, y } | null
   const promptedRef = React.useRef(false);   // only auto-prompt once per conversation
   const idleRef = React.useRef(null);
+  const wordCacheRef = React.useRef({});      // cache word-tap translations (avoid re-calling for the same word)
 
   // Auto-popup suppressed for the rest of today?
   function autoPromptSnoozed() {
@@ -180,6 +181,14 @@ function LiveTranslator({ tweaks, setTweak }) {
     setWordPop({ term: word, translation: '', loading: true, hlSentence: fullSentence, hlSelected: word, tapId: tapId || null, x: anchor.x, y: anchor.y, bottom: anchor.bottom });
 
     (async () => {
+      // Cache: the same tapped word in the same sentence always resolves to the
+      // same answer — serve repeats from memory instead of re-calling the API.
+      const cacheKey = `${fromName}>${toName}|${fullSentence}|${word}`;
+      const cached = wordCacheRef.current[cacheKey];
+      if (cached) {
+        setWordPop(wp => wp ? { ...wp, term: cached.selected || word, translation: cached.translation, hlSelected: cached.selected || word, loading: false } : null);
+        return;
+      }
       try {
         const res = await window.CT_API.complete(
           `In the ${fromName} sentence below, the user tapped the word "${word}". ` +
@@ -198,6 +207,7 @@ function LiveTranslator({ tweaks, setTweak }) {
         let p = null;
         try { p = JSON.parse(raw); } catch (e) {}
         if (p && p.translation) {
+          wordCacheRef.current[cacheKey] = { selected: p.selected || word, translation: p.translation };
           setWordPop(wp => wp ? { ...wp, term: p.selected || word, translation: p.translation, hlSelected: p.selected || word, loading: false } : null);
         } else {
           setWordPop(wp => wp ? { ...wp, translation: raw || window.t('transFailed'), loading: false } : null);

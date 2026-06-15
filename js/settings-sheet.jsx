@@ -1,11 +1,11 @@
 // App version + settings sheet (bottom-sheet) showing version info.
 window.CT_VERSION = {
-  number: '1.4.3',
+  number: '1.4.4',
   build: '2026.06.15',
   label: 'Beta',
   notes: {
-    KO: '학습 모드: 타이핑 중 자동번역 → 다 입력한 뒤 “번역” 1회로 변경(API 비용 절감) · 개인정보 처리방침 추가 · 로딩 화면 정리',
-    EN: 'Learn mode: translate once on tap instead of live-as-you-type (cuts API cost) · added a privacy policy · cleaner loading screen',
+    KO: 'API 비용 최적화: 학습 번역은 입력 후 1회만 · 단어 탭 번역 캐시 · 저장 자동안내는 사용 시에만 요약 생성 · 개인정보 처리방침 추가',
+    EN: 'API cost tuning: learn-mode translates once on tap · word-tap cache · save nudge generates summary only when used · added a privacy policy',
   },
 };
 
