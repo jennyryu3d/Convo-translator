@@ -21,7 +21,7 @@ const I = {
 window.CT_ICONS = I;
 
 // ── Top app bar ────────────────────────────────────────────────────────
-function TopBar({ palette, dark, onToggleDark, showMascot = true, onSearch, onSettings, onHistory, onSaveConvo, target = 'EN', native = 'KO', onPickTarget, onPickNative }) {
+function TopBar({ palette, dark, onToggleDark, showMascot = true, onSearch, onSettings, onHistory, onSaveConvo, onShare, target = 'EN', native = 'KO', onPickTarget, onPickNative }) {
   const c = palette;
   const tgt = window.CT_LANG.byCode(target);
   const nat = window.CT_LANG.byCode(native);
@@ -72,6 +72,14 @@ function TopBar({ palette, dark, onToggleDark, showMascot = true, onSearch, onSe
           </div>
         </div>
         <div style={{ display: 'flex', gap: 4 }}>
+          {onShare && (
+            <HeaderIcon onClick={onShare} ariaLabel="share">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/>
+                <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/>
+              </svg>
+            </HeaderIcon>
+          )}
           <HeaderIcon onClick={() => window.location.reload()} ariaLabel="refresh">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <path d="M21 12a9 9 0 1 1-2.64-6.36"/><path d="M21 3v6h-6"/>

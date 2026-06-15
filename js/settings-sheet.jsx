@@ -1,11 +1,11 @@
 // App version + settings sheet (bottom-sheet) showing version info.
 window.CT_VERSION = {
-  number: '1.4.6',
+  number: '1.4.7',
   build: '2026.06.15',
   label: 'Beta',
   notes: {
-    KO: '앱 첫 화면을 실시간 대화 모드로 변경 · 새 대화 확인창을 디자인 모달로 변경 · API 비용 최적화',
-    EN: 'Home now opens in live conversation mode · branded new-conversation dialog · API cost tuning',
+    KO: '상단에 공유 버튼 추가(친구에게 바로 공유) · 첫 화면 실시간 대화 모드 · 새 대화 디자인 모달',
+    EN: 'Added a share button in the header (share with a friend instantly) · home opens in live mode · branded new-conversation dialog',
   },
 };
 

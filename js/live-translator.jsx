@@ -151,6 +151,19 @@ function LiveTranslator({ tweaks, setTweak }) {
     setConfirmNew(true);
   }
 
+  // Share the app: native share sheet (KakaoTalk, Messages, Mail…) on devices
+  // that support it; copy the link to the clipboard as a fallback.
+  async function handleShare() {
+    const url = 'https://convotrans.jennyryu3d.com';
+    if (navigator.share) {
+      try { await navigator.share({ title: 'ConvoTrans', text: window.t('shareText'), url }); return; }
+      catch (e) { if (e && e.name === 'AbortError') return; /* else fall through to copy */ }
+    }
+    try { await navigator.clipboard.writeText(url); setSkinToast(window.t('linkCopied')); }
+    catch (e) { setSkinToast(url); }
+    setTimeout(() => setSkinToast(null), 1800);
+  }
+
   function nowStamp() {
     const d = new Date();
     const h = d.getHours();
@@ -390,6 +403,7 @@ function LiveTranslator({ tweaks, setTweak }) {
         onSearch={() => { setSearchMode('search'); setSearchOpen(true); }}
         onHistory={() => { setSearchMode('history'); setSearchOpen(true); }}
         onSettings={() => setSettingsOpen(true)}
+        onShare={handleShare}
         onSaveConvo={() => { if (convo.length) { setSaveAuto(false); setSaveOpen(true); } }}
         target={target} native={native}
         onPickTarget={() => setLangPicker('target')}
