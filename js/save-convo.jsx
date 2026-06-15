@@ -33,54 +33,65 @@ function SaveConvoSheet({ palette, dark, convo, target, native, mode = 'practice
   const nativeLang = window.CT_LANG.byCode(native);
   const [title, setTitle] = React.useState('');
   const [summary, setSummary] = React.useState('');
-  const [loadingSummary, setLoadingSummary] = React.useState(true);
+  // Manual open → generate immediately (the user came here to save). Auto-open
+  // (the 45s idle nudge) → defer: most nudges get dismissed, so we only spend an
+  // API call once the user actually engages (focuses a field or taps Save).
+  const [loadingSummary, setLoadingSummary] = React.useState(!autoOpened);
+  const genRef = React.useRef(false);      // has generation already started?
+  const mountedRef = React.useRef(true);
+  React.useEffect(() => () => { mountedRef.current = false; }, []);
 
-  // Auto-generate a title + summary from the transcript on open.
-  React.useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      const transcript = convo.map(m => {
-        const who = m.side === 'me' ? 'Me' : 'Them';
-        let line = `${who}: ${m.orig}${m.trans ? ' (' + m.trans + ')' : ''}`;
-        if (m.side === 'them' && typeof m.pickedIdx === 'number' && m.suggestions && m.suggestions[m.pickedIdx]) {
-          const pick = m.suggestions[m.pickedIdx];
-          line += `\nMe: ${pick.en}${pick.ko ? ' (' + pick.ko + ')' : ''}`;
-        }
-        return line;
-      }).join('\n');
-      try {
-        const res = await window.CT_API.complete(
-          `Here is a bilingual conversation transcript. In ${nativeLang.native}, produce:\n` +
-          `1) a short title (max 6 words) — guess the other person's name if mentioned, else the topic\n` +
-          `2) a 2-3 sentence summary of what was discussed.\n` +
-          `Return strict JSON on one line: {"title":"...","summary":"..."}\n\nTranscript:\n${transcript}`
-        );
-        if (cancelled) return;
-        const raw = String(res).trim().replace(/^```json\s*/i,'').replace(/```\s*$/,'');
-        let parsed = null;
-        try { parsed = JSON.parse(raw); } catch (e) {}
-        if (parsed) {
-          setTitle(parsed.title || '');
-          setSummary(parsed.summary || '');
-        } else {
-          setSummary(raw);
-        }
-      } catch (e) {
-        if (!cancelled) { setTitle(''); setSummary(''); }
-      } finally {
-        if (!cancelled) setLoadingSummary(false);
+  // Generate a title + summary from the transcript. Runs at most once; returns
+  // the generated { title, summary } so a caller (doSave) can use the values
+  // without waiting for a state update.
+  async function generate() {
+    if (genRef.current) return { title, summary };
+    genRef.current = true;
+    if (mountedRef.current) setLoadingSummary(true);
+    const transcript = convo.map(m => {
+      const who = m.side === 'me' ? 'Me' : 'Them';
+      let line = `${who}: ${m.orig}${m.trans ? ' (' + m.trans + ')' : ''}`;
+      if (m.side === 'them' && typeof m.pickedIdx === 'number' && m.suggestions && m.suggestions[m.pickedIdx]) {
+        const pick = m.suggestions[m.pickedIdx];
+        line += `\nMe: ${pick.en}${pick.ko ? ' (' + pick.ko + ')' : ''}`;
       }
-    })();
-    return () => { cancelled = true; };
-  }, []);
+      return line;
+    }).join('\n');
+    let t = '', s = '';
+    try {
+      const res = await window.CT_API.complete(
+        `Here is a bilingual conversation transcript. In ${nativeLang.native}, produce:\n` +
+        `1) a short title (max 6 words) — guess the other person's name if mentioned, else the topic\n` +
+        `2) a 2-3 sentence summary of what was discussed.\n` +
+        `Return strict JSON on one line: {"title":"...","summary":"..."}\n\nTranscript:\n${transcript}`
+      );
+      const raw = String(res).trim().replace(/^```json\s*/i,'').replace(/```\s*$/,'');
+      let parsed = null;
+      try { parsed = JSON.parse(raw); } catch (e) {}
+      if (parsed) { t = parsed.title || ''; s = parsed.summary || ''; }
+      else { s = raw; }
+    } catch (e) { /* leave blank on failure */ }
+    if (mountedRef.current) { setTitle(t); setSummary(s); setLoadingSummary(false); }
+    return { title: t, summary: s };
+  }
 
-  function doSave() {
+  // Manual open: generate now. Auto-open: defer until the user engages.
+  React.useEffect(() => { if (!autoOpened) generate(); }, []);
+
+  async function doSave() {
+    // If the sheet auto-opened and the user taps Save without engaging, generate
+    // the title/summary now (once) so the saved entry still gets one.
+    let t = title, s = summary;
+    if (!genRef.current && convo.length) {
+      const g = await generate();
+      t = g.title || t; s = g.summary || s;
+    }
     const entry = {
       id: 'saved-' + Date.now(),
-      title: (title || window.t('untitledConvo')).trim(),
-      summary: summary.trim(),
-      partner: (title || window.t('convoWord')).trim(),
-      topic: summary.trim().slice(0, 60) || window.t('savedConvoTopic'),
+      title: (t || window.t('untitledConvo')).trim(),
+      summary: s.trim(),
+      partner: (t || window.t('convoWord')).trim(),
+      topic: s.trim().slice(0, 60) || window.t('savedConvoTopic'),
       date: todayLabel(),
       label: window.t('savedLabel'),
       mode: mode === 'live' ? 'live' : 'practice',  // which screen produced it
@@ -147,6 +158,7 @@ function SaveConvoSheet({ palette, dark, convo, target, native, mode = 'practice
           <input
             value={title}
             onChange={e => setTitle(e.target.value)}
+            onFocus={() => generate()}
             placeholder={loadingSummary ? window.t('titleGenerating') : window.t('titlePlaceholder')}
             style={{
               width: '100%', marginTop: 5, border: `1.5px solid ${c.divider}`, borderRadius: 12,
@@ -164,6 +176,7 @@ function SaveConvoSheet({ palette, dark, convo, target, native, mode = 'practice
           <textarea
             value={summary}
             onChange={e => setSummary(e.target.value)}
+            onFocus={() => generate()}
             rows={4}
             placeholder={loadingSummary ? window.t('summaryGenerating') : window.t('summaryPlaceholder')}
             style={{
