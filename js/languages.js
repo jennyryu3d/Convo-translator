@@ -53,7 +53,7 @@ window.CT_UI = {
     apiConnection: 'API connection', designEnv: 'Design environment',
     connectedMyKey: 'Connected (your key)', serverConnected: 'Server connected',
     appAddress: 'App address', colorTheme: 'Color theme', whatsNew: "What's new",
-    privacyPolicy: 'Privacy policy', view: 'View',
+    privacyPolicy: 'Privacy policy', view: 'View', developer: 'Developer',
     tagline: 'Real-time conversation translator · 14 languages',
     // Language picker
     pickConvoLang: 'Choose conversation language', pickNativeLang: 'Choose my language',
@@ -130,7 +130,7 @@ window.CT_UI = {
     apiConnection: 'API 연결', designEnv: '디자인 환경',
     connectedMyKey: '연결됨 (내 키)', serverConnected: '서버 연결됨',
     appAddress: '앱 주소', colorTheme: '색상 테마', whatsNew: '이번 업데이트',
-    privacyPolicy: '개인정보 처리방침', view: '보기',
+    privacyPolicy: '개인정보 처리방침', view: '보기', developer: '개발자',
     tagline: '대화를 잇는 실시간 번역기 · 14개 언어 지원',
     // Language picker
     pickConvoLang: '대화 언어 선택', pickNativeLang: '내 모국어 선택',

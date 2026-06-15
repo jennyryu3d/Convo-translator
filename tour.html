@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <title>ConvoTrans — 사용법 둘러보기</title>
+  <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png" />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --ink:#16302c; --ink2:#3f534e; --muted:#5f6f6a; --line:#dde6e2;
+      --brand:#006898; --brand-deep:#002854; --bg:#F2F5F8; --card:#fff;
+    }
+    * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+    html, body { margin:0; padding:0; background:var(--bg); color:var(--ink);
+      font-family:'Plus Jakarta Sans',-apple-system,system-ui,sans-serif; -webkit-text-size-adjust:100%; }
+
+    header { text-align:center; padding:26px 20px 6px; }
+    header .row { display:inline-flex; align-items:center; gap:10px; }
+    header img.logo { width:40px; height:40px; border-radius:11px; box-shadow:0 3px 10px rgba(8,27,27,.18); }
+    header .name { font-family:'Chakra Petch',system-ui,sans-serif; font-size:22px; font-weight:700; color:var(--brand-deep); letter-spacing:-.01em; }
+    header .tag { margin:10px 0 0; font-size:14px; color:var(--ink2); font-weight:600; line-height:1.5; }
+    header .tag b { color:var(--brand); }
+
+    /* App-store-style horizontal strip: one phone per view, neighbors peek in. */
+    .strip {
+      display:flex; gap:18px; overflow-x:auto; scroll-snap-type:x mandatory;
+      padding:18px max(16px, calc((100vw - 320px) / 2)) 8px;
+      scrollbar-width:none; -ms-overflow-style:none;
+    }
+    .strip::-webkit-scrollbar { display:none; }
+    .slide { scroll-snap-align:center; flex:0 0 auto; width:min(82vw, 320px); }
+    .cap { text-align:center; margin:0 4px 12px; min-height:62px; }
+    .cap .step { font-size:11px; font-weight:800; letter-spacing:.12em; text-transform:uppercase; color:var(--brand); }
+    .cap .t { font-size:17px; font-weight:800; color:var(--ink); margin-top:4px; }
+    .cap .b { font-size:13px; color:var(--ink2); margin-top:5px; line-height:1.5; }
+
+    .shot {
+      width:100%; aspect-ratio:1080/2400; border-radius:26px; overflow:hidden;
+      background:#e7edf1; border:1px solid var(--line);
+      box-shadow:0 18px 40px -12px rgba(0,18,38,.35), 0 6px 14px rgba(0,18,38,.14);
+      position:relative;
+    }
+    .shot img { width:100%; height:100%; object-fit:cover; display:block; }
+    .shot .ph { position:absolute; inset:0; display:none; flex-direction:column; align-items:center; justify-content:center; gap:8px; color:var(--muted); padding:20px; text-align:center; }
+    .shot .ph svg { opacity:.5; }
+    .shot.empty img { display:none; }
+    .shot.empty .ph { display:flex; }
+
+    .dots { display:flex; justify-content:center; gap:7px; margin:14px 0 4px; flex-wrap:wrap; padding:0 16px; }
+    .dot { width:8px; height:8px; border-radius:999px; background:var(--line); border:none; padding:0; cursor:pointer; transition:all .2s; }
+    .dot.on { background:var(--brand); width:22px; }
+
+    /* Desktop arrows (hidden on touch) */
+    .arrows { display:none; justify-content:center; gap:12px; margin-top:6px; }
+    .arrows button { width:42px; height:42px; border-radius:999px; border:1px solid var(--line); background:var(--card); color:var(--brand); cursor:pointer; font-size:18px; display:flex; align-items:center; justify-content:center; box-shadow:0 2px 6px rgba(0,18,38,.08); }
+    .arrows button:disabled { opacity:.35; cursor:default; }
+    @media (hover:hover) and (pointer:fine) { .arrows { display:flex; } }
+
+    .cta { text-align:center; padding:18px 20px 40px; }
+    .cta a { display:inline-flex; align-items:center; gap:8px; text-decoration:none;
+      background:var(--brand); color:#fff; font-weight:800; font-size:15px;
+      padding:14px 26px; border-radius:999px; box-shadow:0 8px 20px rgba(0,104,152,.35); }
+    .cta .hint { display:block; margin-top:12px; font-size:12px; color:var(--muted); line-height:1.5; }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="row">
+      <img class="logo" src="convotrans-design/assets/app-icon.png" alt="ConvoTrans" />
+      <span class="name">ConvoTrans</span>
+    </div>
+    <p class="tag">번역을 넘어, <b>다음에 할 말까지 제안해</b> 대화를 이어주는 번역 앱<br>아래로 넘기며 사용법을 둘러보세요 →</p>
+  </header>
+
+  <div class="strip" id="strip"></div>
+
+  <div class="dots" id="dots"></div>
+  <div class="arrows">
+    <button id="prev" aria-label="이전">‹</button>
+    <button id="next" aria-label="다음">›</button>
+  </div>
+
+  <div class="cta">
+    <a href="index.html">앱 열어보기 →</a>
+    <span class="hint">설치 없이 바로 사용 · 모바일에서 “홈 화면에 추가”하면 앱처럼 써요</span>
+  </div>
+
+  <script>
+    // ── EDIT HERE ─────────────────────────────────────────────────────────
+    // Add the screenshot files to /screenshots and list them here in the order
+    // you want them shown. Add or remove entries freely — the carousel adapts.
+    const SLIDES = [
+      { src: 'screenshots/01.png', step: 'Step 1', t: '앱 실행', b: '설치 없이 열고, 홈 화면에 추가하면 앱처럼' },
+      { src: 'screenshots/02.png', step: 'Step 2', t: '언어 & 모드 선택', b: '내 언어·상대 언어를 고르고 실시간/학습 모드 선택' },
+      { src: 'screenshots/03.png', step: 'Step 3', t: '말하면 양방향 번역', b: '내 말과 상대 말이 서로의 언어로 즉시 번역돼요' },
+      { src: 'screenshots/04.png', step: 'Step 4', t: '다음 말 제안', b: 'AI가 이어갈 다음 한마디를 제안 — 핵심 차별점' },
+      { src: 'screenshots/05.png', step: 'Step 5', t: '골라서 대화 잇기', b: '제안을 넘겨보고 마음에 드는 답변을 선택' },
+    ];
+    // ──────────────────────────────────────────────────────────────────────
+
+    const strip = document.getElementById('strip');
+    const dots  = document.getElementById('dots');
+
+    SLIDES.forEach((s, i) => {
+      const slide = document.createElement('div');
+      slide.className = 'slide';
+      slide.innerHTML =
+        '<div class="cap"><div class="step">' + s.step + '</div>' +
+        '<div class="t">' + s.t + '</div><div class="b">' + s.b + '</div></div>' +
+        '<div class="shot">' +
+          '<img src="' + s.src + '" alt="' + s.t + '" loading="lazy" ' +
+            'onerror="this.closest(\'.shot\').classList.add(\'empty\')" />' +
+          '<div class="ph"><svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="6" y="2" width="12" height="20" rx="3"/><line x1="10" y1="18.5" x2="14" y2="18.5"/></svg>' +
+          '<span style="font-size:12px;font-weight:700">스크린샷 준비 중</span>' +
+          '<span style="font-size:11px;opacity:.8">' + s.src + '</span></div>' +
+        '</div>';
+      strip.appendChild(slide);
+
+      const dot = document.createElement('button');
+      dot.className = 'dot' + (i === 0 ? ' on' : '');
+      dot.setAttribute('aria-label', (i + 1) + '번째 화면');
+      dot.addEventListener('click', () => scrollToIndex(i));
+      dots.appendChild(dot);
+    });
+
+    const slideEls = [...strip.querySelectorAll('.slide')];
+    const prevBtn = document.getElementById('prev');
+    const nextBtn = document.getElementById('next');
+
+    function currentIndex() {
+      const center = strip.scrollLeft + strip.clientWidth / 2;
+      let best = 0, bestDist = Infinity;
+      slideEls.forEach((el, i) => {
+        const elCenter = el.offsetLeft + el.offsetWidth / 2;
+        const d = Math.abs(elCenter - center);
+        if (d < bestDist) { bestDist = d; best = i; }
+      });
+      return best;
+    }
+    function scrollToIndex(i) {
+      const el = slideEls[i];
+      if (!el) return;
+      strip.scrollTo({ left: el.offsetLeft - (strip.clientWidth - el.offsetWidth) / 2, behavior: 'smooth' });
+    }
+    function sync() {
+      const i = currentIndex();
+      dots.querySelectorAll('.dot').forEach((d, k) => d.classList.toggle('on', k === i));
+      prevBtn.disabled = i <= 0;
+      nextBtn.disabled = i >= slideEls.length - 1;
+    }
+    let raf;
+    strip.addEventListener('scroll', () => { cancelAnimationFrame(raf); raf = requestAnimationFrame(sync); });
+    prevBtn.addEventListener('click', () => scrollToIndex(currentIndex() - 1));
+    nextBtn.addEventListener('click', () => scrollToIndex(currentIndex() + 1));
+    sync();
+  </script>
+</body>
+</html>
