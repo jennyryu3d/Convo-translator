@@ -1,11 +1,11 @@
 // App version + settings sheet (bottom-sheet) showing version info.
 window.CT_VERSION = {
-  number: '1.4.1',
-  build: '2026.06.14',
+  number: '1.4.2',
+  build: '2026.06.15',
   label: 'Beta',
   notes: {
-    KO: '설정 유지: 테마(다크)·언어 선택이 재시작해도 유지 · 30분 이상 지나면 새 대화로 시작 · 상단 언어 라벨은 항상 영어 · 로딩 로고',
-    EN: 'Settings persist: theme (dark) and language choices survive restart · starts fresh after 30+ min idle · top language labels always English · loading logo',
+    KO: '개인정보 처리방침 추가(설정에서 보기) · 로딩 화면 정리 · 설정·언어·테마 유지 · 30분 후 새 대화',
+    EN: 'Added a privacy policy (see Settings) · cleaner loading screen · settings/language/theme persist · fresh chat after 30 min',
   },
 };
 
@@ -70,6 +70,15 @@ function SettingsSheet({ palette, dark, onClose, target, native, skinId = 'blue'
             <a href="https://convotrans.jennyryu3d.com" target="_blank" rel="noreferrer" style={{
               fontSize: 13, fontWeight: 700, color: c.primary, textDecoration: 'none',
             }}>convotrans.jennyryu3d.com</a>
+          </div>
+          <div style={{
+            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+            padding: '12px 6px',
+          }}>
+            <span style={{ fontSize: 13, color: c.ink2, fontWeight: 500 }}>{window.t('privacyPolicy')}</span>
+            <a href="privacy.html" target="_blank" rel="noreferrer" style={{
+              fontSize: 13, fontWeight: 700, color: c.primary, textDecoration: 'none',
+            }}>{window.t('view')}</a>
           </div>
         </div>
 
