@@ -91,6 +91,11 @@ function LiveTranslator({ tweaks, setTweak }) {
   const native = tweaks.native || 'KO';
   // UI language: Korean if my language is Korean, otherwise English.
   window.CT_LOCALE = native === 'KO' ? 'KO' : 'EN';
+  // Keep spoken output in the conversation language so the voice picker (and
+  // the natural-voice auto-pick) applies to every "listen" button.
+  React.useEffect(() => {
+    if (window.CT_SPEAK) window.CT_SPEAK.setDefaultLang(window.CT_LANG.byCode(target).locale);
+  }, [target]);
   const scrollRef = window.useDragScroll();
 
   React.useEffect(() => {

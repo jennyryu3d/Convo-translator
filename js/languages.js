@@ -54,6 +54,9 @@ window.CT_UI = {
     connectedMyKey: 'Connected (your key)', serverConnected: 'Server connected',
     appAddress: 'App address', colorTheme: 'Color theme', whatsNew: "What's new",
     privacyPolicy: 'Privacy policy', view: 'View', developer: 'Developer',
+    voiceLabel: 'Voice', voiceAuto: 'Auto (most natural)', voicePreview: 'Preview',
+    voiceNone: 'No voices for this language are installed in your browser.',
+    voiceHint: 'Used when the app reads the conversation language aloud.',
     tagline: 'Real-time conversation translator · 14 languages',
     // Language picker
     pickConvoLang: 'Choose conversation language', pickNativeLang: 'Choose my language',
@@ -135,6 +138,9 @@ window.CT_UI = {
     connectedMyKey: '연결됨 (내 키)', serverConnected: '서버 연결됨',
     appAddress: '앱 주소', colorTheme: '색상 테마', whatsNew: '이번 업데이트',
     privacyPolicy: '개인정보 처리방침', view: '보기', developer: '개발자',
+    voiceLabel: '음성(목소리)', voiceAuto: '자동 (가장 자연스럽게)', voicePreview: '들어보기',
+    voiceNone: '이 브라우저에 이 언어의 음성이 설치돼 있지 않아요.',
+    voiceHint: '대화 언어를 소리내어 읽어줄 때 사용돼요.',
     tagline: '대화를 잇는 실시간 번역기 · 14개 언어 지원',
     // Language picker
     pickConvoLang: '대화 언어 선택', pickNativeLang: '내 모국어 선택',
