@@ -1,11 +1,11 @@
 // App version + settings sheet (bottom-sheet) showing version info.
 window.CT_VERSION = {
-  number: '1.4.9',
-  build: '2026.06.15',
+  number: '1.5.0',
+  build: '2026.06.16',
   label: 'Beta',
   notes: {
-    KO: '설정에 개발자(Jenny Ryu) 표기 · 개인정보 처리방침 업데이트(전 연령 이용, 문의 이메일) · 한 번 탭 번역·전송',
-    EN: 'Developer credit (Jenny Ryu) in settings · privacy policy updated (all ages, contact email) · one-tap translate & send',
+    KO: '자연스러운 음성 자동 선택 + 설정에서 목소리 직접 선택 · 연결 오류 시 다시 시도 버튼 · 표기 정리(JRyu · Krafton)',
+    EN: 'Natural voice auto-selected + pick a voice in Settings · retry button on connection errors · credits cleaned up (JRyu · Krafton)',
   },
 };
 
@@ -62,7 +62,7 @@ function SettingsSheet({ palette, dark, onClose, target, native, skinId = 'blue'
           <Row c={c} label={window.t('myNativeLang')} value={`${nat.name} (${nat.code})`} />
           <Row c={c} label={window.t('speechRecognition')} value={sttOK ? window.t('supported') : window.t('unsupportedBrowser')} ok={sttOK} />
           <Row c={c} label={window.t('apiConnection')} value={!window.CT_API.needsKey() ? window.t('designEnv') : (window.CT_API.getKey() ? window.t('connectedMyKey') : window.t('serverConnected'))} ok />
-          <Row c={c} label={window.t('developer')} value="Jenny Ryu" />
+          <Row c={c} label={window.t('developer')} value="JRyu" />
           <div style={{
             display: 'flex', alignItems: 'center', justifyContent: 'space-between',
             padding: '12px 6px',
@@ -82,6 +82,9 @@ function SettingsSheet({ palette, dark, onClose, target, native, skinId = 'blue'
             }}>{window.t('view')}</a>
           </div>
         </div>
+
+        {/* Voice (TTS) picker */}
+        <VoicePicker c={c} target={target} />
 
         {/* Color skin picker */}
         <div style={{ padding: '14px 18px 0' }}>
@@ -125,9 +128,60 @@ function SettingsSheet({ palette, dark, onClose, target, native, skinId = 'blue'
 
         <div style={{ padding: '14px 20px 0', textAlign: 'center', fontSize: 11, color: c.ink3, lineHeight: 1.5 }}>
           {window.t('tagline')}<br/>
-          © 2026 ConvoTrans
+          © 2026 Krafton, Inc.
         </div>
       </div>
+    </div>
+  );
+}
+
+// Voice (text-to-speech) picker for the current conversation language.
+function VoicePicker({ c, target }) {
+  const tgt = window.CT_LANG.byCode(target);
+  const locale = tgt.locale;
+  const speak = window.CT_SPEAK;
+  const [voices, setVoices] = React.useState(() => (speak ? speak.voicesFor(locale) : []));
+  const [sel, setSel] = React.useState(() => (speak ? speak.getPref(locale) : ''));
+
+  React.useEffect(() => {
+    if (!speak) return;
+    const refresh = () => setVoices(speak.voicesFor(locale));
+    refresh();
+    setSel(speak.getPref(locale));
+    // Voices can populate a beat after the sheet opens.
+    const t = setTimeout(refresh, 350);
+    return () => clearTimeout(t);
+  }, [locale]);
+
+  if (!speak) return null;
+
+  function pick(uri) { setSel(uri); speak.setPref(locale, uri); }
+  function preview() { speak.once(tgt.sample || tgt.name, locale); }
+
+  return (
+    <div style={{ padding: '14px 18px 0' }}>
+      <div style={{ fontSize: 10, fontWeight: 800, letterSpacing: 0.6, textTransform: 'uppercase', color: c.ink3, marginBottom: 8, fontFamily: "'Chakra Petch', system-ui, sans-serif" }}>
+        {window.t('voiceLabel')} · {tgt.name}
+      </div>
+      {voices.length === 0 ? (
+        <div style={{ fontSize: 12, color: c.ink3, lineHeight: 1.5 }}>{window.t('voiceNone')}</div>
+      ) : (
+        <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+          <select value={sel} onChange={e => pick(e.target.value)} style={{
+            flex: 1, minWidth: 0, padding: '10px 12px', borderRadius: 12,
+            border: `1.5px solid ${c.divider}`, background: c.bg, color: c.ink,
+            fontSize: 13, fontFamily: 'inherit', outline: 'none',
+          }}>
+            <option value="">{window.t('voiceAuto')}</option>
+            {voices.map(v => <option key={v.voiceURI} value={v.voiceURI}>{v.name}</option>)}
+          </select>
+          <button onClick={preview} style={{
+            flexShrink: 0, padding: '10px 14px', borderRadius: 12, border: 'none', cursor: 'pointer',
+            background: c.primary, color: c.primaryInk, fontSize: 13, fontWeight: 700, fontFamily: 'inherit',
+          }}>{window.t('voicePreview')}</button>
+        </div>
+      )}
+      <div style={{ marginTop: 6, fontSize: 11, color: c.ink3, lineHeight: 1.5 }}>{window.t('voiceHint')}</div>
     </div>
   );
 }
