@@ -14,9 +14,21 @@ window.CT_API = (function () {
   function arm(fn)  { _lastAction = typeof fn === 'function' ? fn : null; }
   function retry()  { const f = _lastAction; if (f) return f(); }
 
-  // Serverless proxy endpoint. The owner's Anthropic key lives here, never in
-  // the browser. See worker/ for the Cloudflare Worker that backs this.
-  const PROXY_URL = 'https://convotrans-proxy.jenny3d.workers.dev/translate';
+  // Serverless proxy endpoint. The Anthropic key lives there, never in the
+  // browser. Two backends during the company migration:
+  //   • Company deploy (Vercel/KP) serves the proxy SAME-ORIGIN at /api/translate
+  //     (see api/translate.js). No cross-origin, key held in the project env.
+  //   • Legacy public deploy (GitHub Pages) + local testing keep using the
+  //     existing Cloudflare Worker (see worker/).
+  // An explicit override wins: set window.CT_CONFIG = { proxyUrl: '...' }.
+  function defaultProxyUrl() {
+    const h = (location.hostname || '').toLowerCase();
+    if (h.endsWith('github.io') || h.endsWith('jennyryu3d.com') || h === 'localhost' || h === '127.0.0.1') {
+      return 'https://convotrans-proxy.jenny3d.workers.dev/translate';
+    }
+    return '/api/translate';
+  }
+  const PROXY_URL = (window.CT_CONFIG && window.CT_CONFIG.proxyUrl) || defaultProxyUrl();
 
   function getKey() {
     try { return localStorage.getItem(KEY_STORAGE) || ''; } catch (e) { return ''; }
