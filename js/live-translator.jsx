@@ -218,7 +218,8 @@ function LiveTranslator({ tweaks, setTweak }) {
           `(e.g. for "reschedule for tomorrow", select just "reschedule"). ` +
           `Keep the selection as SHORT as possible.\n` +
           `Return strict one-line JSON: {"selected":"<the word or minimal phrase in ${fromName}>","translation":"<${toName} translation>"}\n\n` +
-          `Sentence: ${fullSentence}`
+          `Sentence: ${fullSentence}`,
+          { silent: true }
         );
         const raw = String(res).trim().replace(/^```json\s*/i,'').replace(/```\s*$/,'');
         let p = null;
@@ -286,7 +287,8 @@ function LiveTranslator({ tweaks, setTweak }) {
           `Then propose 3 short follow-up replies A could send next, each responding to YOUR reply.\n` +
           `Return strict JSON on one line. "ko" MUST be a full natural ${nativeName} translation of the "en" sentence (NOT a category or keyword):\n` +
           `{"reply":"<${targetName}>","reply_native":"<full ${nativeName} translation of reply>","suggestions":[{"en":"<${targetName} follow-up>","ko":"<full ${nativeName} translation>"},{"en":"...","ko":"..."},{"en":"...","ko":"..."}]}\n\n` +
-          `Conversation so far:\n${recent}`
+          `Conversation so far:\n${recent}`,
+          { silent: true }
         );
         const raw = String(res).trim().replace(/^```json\s*/i,'').replace(/```\s*$/,'');
         const p = JSON.parse(raw);
@@ -328,7 +330,8 @@ function LiveTranslator({ tweaks, setTweak }) {
           `Then propose 3 short follow-up replies A could send next, each responding to YOUR reply.\n` +
           `Return strict JSON on one line. "ko" MUST be a full natural ${nativeName} translation of the "en" sentence (NOT a category or keyword):\n` +
           `{"reply":"<${targetName}>","reply_native":"<full ${nativeName} translation of reply>","suggestions":[{"en":"<${targetName} follow-up>","ko":"<full ${nativeName} translation>"},{"en":"...","ko":"..."},{"en":"...","ko":"..."}]}\n\n` +
-          `Conversation so far:\n${recent}`
+          `Conversation so far:\n${recent}`,
+          { silent: true }
         );
         const raw = String(res).trim().replace(/^```json\s*/i,'').replace(/```\s*$/,'');
         const p = JSON.parse(raw);
@@ -371,7 +374,8 @@ function LiveTranslator({ tweaks, setTweak }) {
           `Propose 3 short, natural replies I could say next in ${targetName}, each directly responding to what they said.\n` +
           `Return strict JSON on one line. "ko" MUST be a full natural ${nativeName} translation of the "en" sentence (NOT a category or keyword):\n` +
           `{"suggestions":[{"en":"<${targetName}>","ko":"<full ${nativeName} translation>"},{"en":"...","ko":"..."},{"en":"...","ko":"..."}]}\n\n` +
-          `Conversation so far:\n${recent}\n\nTheir last words: ${targetText}`
+          `Conversation so far:\n${recent}\n\nTheir last words: ${targetText}`,
+          { silent: true }
         );
         const raw = String(res).trim().replace(/^```json\s*/i,'').replace(/```\s*$/,'');
         const p = JSON.parse(raw);
@@ -1068,19 +1072,25 @@ function LiveInput({ palette, dark, fontScale = 1, appMode = 'practice', onModeC
         setRecSide(null); recRef.current = null;
         const text = (captured || '').trim();
         if (!text) return;
-        setBusy(true);
-        try {
-          if (side === 'me') {
-            const out = await translate(text, nativeLang.native, targetLang.native);
-            // Do NOT auto-play through the speaker — it can startle the other
-            // person. The message bubble has a speaker button for manual play.
-            onSendMine(text, out, 'foreign', { noReply: true });
-          } else {
-            const out = await translate(text, targetLang.native, nativeLang.native);
-            onSendThem(text, out);
-          }
-        } catch (e) {}
-        setBusy(false);
+        // Wrap so the connection notice's "retry" can re-run this exact
+        // translation+send (the captured text), not re-record the mic.
+        const doTranslate = async () => {
+          setBusy(true);
+          try {
+            if (side === 'me') {
+              const out = await translate(text, nativeLang.native, targetLang.native);
+              // Do NOT auto-play through the speaker — it can startle the other
+              // person. The message bubble has a speaker button for manual play.
+              onSendMine(text, out, 'foreign', { noReply: true });
+            } else {
+              const out = await translate(text, targetLang.native, nativeLang.native);
+              onSendThem(text, out);
+            }
+          } catch (e) {}
+          setBusy(false);
+        };
+        window.CT_API.arm(doTranslate);
+        doTranslate();
       },
     });
     if (!rec) return;
@@ -1124,6 +1134,10 @@ function LiveInput({ palette, dark, fontScale = 1, appMode = 'practice', onModeC
     if (isLive || translating) return;
     const text = rawInput.trim();
     if (!text) return;
+    // Register this send as the retriable action. On failure the input is kept,
+    // so re-running re-translates the same text; on success the input is cleared
+    // and a re-run safely no-ops.
+    window.CT_API.arm(() => handleSend());
     setTranslating(true);
     try {
       const targetName = targetLang.native;

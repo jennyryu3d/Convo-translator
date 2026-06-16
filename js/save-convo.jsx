@@ -63,7 +63,8 @@ function SaveConvoSheet({ palette, dark, convo, target, native, mode = 'practice
         `Here is a bilingual conversation transcript. In ${nativeLang.native}, produce:\n` +
         `1) a short title (max 6 words) — guess the other person's name if mentioned, else the topic\n` +
         `2) a 2-3 sentence summary of what was discussed.\n` +
-        `Return strict JSON on one line: {"title":"...","summary":"..."}\n\nTranscript:\n${transcript}`
+        `Return strict JSON on one line: {"title":"...","summary":"..."}\n\nTranscript:\n${transcript}`,
+        { silent: true }
       );
       const raw = String(res).trim().replace(/^```json\s*/i,'').replace(/```\s*$/,'');
       let parsed = null;

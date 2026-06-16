@@ -30,6 +30,12 @@ const ANTHROPIC_VERSION = '2023-06-01';
 // Cap input size so nobody can send a token bomb.
 const MAX_PROMPT_CHARS = 8000;
 
+// Soft rate limits (enforced via Workers KV — only active once RATE_LIMIT_KV is
+// bound; see worker/README.md step 3). Tune these freely.
+const IP_PER_MIN     = 20;    // burst guard: max requests per IP per minute
+const IP_PER_DAY     = 300;   // per-user daily cap (one person can't drain the key)
+const GLOBAL_PER_DAY = 3000;  // total daily budget across ALL users (cost guard)
+
 function corsHeaders(origin) {
   const allow = ALLOWED_ORIGINS.includes(origin) ? origin : '';
   const headers = {
@@ -94,15 +100,18 @@ export default {
 
     // --- Rate limit (no-op until RATE_LIMIT_KV is bound in step 3) ---
     if (env.RATE_LIMIT_KV) {
-      const limited = await rateLimit(env.RATE_LIMIT_KV, request);
-      if (limited) {
+      const rl = await rateLimit(env.RATE_LIMIT_KV, request);
+      if (rl.limited) {
         return new Response(
-          JSON.stringify({ error: 'Rate limit exceeded' }),
+          // `reason` lets the app show the right message: 'rate' (this device
+          // is going too fast/much) vs 'quota' (today's shared budget is spent).
+          JSON.stringify({ error: 'Rate limit exceeded', reason: rl.reason }),
           {
             status: 429,
             headers: {
               'Content-Type': 'application/json',
-              'Retry-After': '60',
+              // Daily budget resets at UTC midnight; per-user caps clear sooner.
+              'Retry-After': rl.reason === 'quota' ? '3600' : '60',
               ...corsHeaders(origin),
             },
           }
@@ -132,6 +141,8 @@ export default {
         // Surface the upstream status + error type so failures are diagnosable.
         return json({
           error: msg,
+          // 'busy' = upstream is rate-limited/overloaded; 'down' = upstream error.
+          reason: res.status === 429 ? 'busy' : 'down',
           upstreamStatus: res.status,
           upstreamType: data?.error?.type || null,
         }, res.status === 429 ? 429 : 502, origin);
@@ -145,8 +156,39 @@ export default {
   },
 };
 
-// Placeholder used in step 3. Returns true when the caller is over the limit.
-// Implemented against Workers KV; safe no-op until then.
-async function rateLimit(_kv, _request) {
-  return false;
+// Soft rate limiting backed by Workers KV. Three layers:
+//   1. per-IP per-minute  — burst guard against loops/abuse
+//   2. per-IP per-day     — one person can't drain the shared key
+//   3. global per-day     — total daily budget across everyone (cost guard);
+//                           when hit, users see the "free usage used up" notice.
+// KV is eventually consistent, so counts are approximate — fine for soft caps.
+// Returns { limited:boolean, reason?: 'rate' | 'quota' }.
+async function rateLimit(kv, request) {
+  const ip  = request.headers.get('CF-Connecting-IP') || 'unknown';
+  const now = Date.now();
+  const min = Math.floor(now / 60000);                  // minute bucket
+  const day = new Date(now).toISOString().slice(0, 10); // UTC date (resets midnight UTC)
+
+  const kMin    = `ip:${ip}:min:${min}`;
+  const kDay    = `ip:${ip}:day:${day}`;
+  const kGlobal = `global:day:${day}`;
+
+  const [minC, dayC, gC] = await Promise.all([
+    kv.get(kMin), kv.get(kDay), kv.get(kGlobal),
+  ]);
+  const minN = parseInt(minC || '0', 10);
+  const dayN = parseInt(dayC || '0', 10);
+  const gN   = parseInt(gC   || '0', 10);
+
+  if (gN   >= GLOBAL_PER_DAY) return { limited: true, reason: 'quota' }; // today's budget spent
+  if (dayN >= IP_PER_DAY)     return { limited: true, reason: 'rate'  }; // this user's daily cap
+  if (minN >= IP_PER_MIN)     return { limited: true, reason: 'rate'  }; // this user's burst cap
+
+  // Count this request. TTLs let the buckets expire on their own.
+  await Promise.all([
+    kv.put(kMin,    String(minN + 1), { expirationTtl: 120   }),  // ~2 min
+    kv.put(kDay,    String(dayN + 1), { expirationTtl: 90000 }),  // ~25 h
+    kv.put(kGlobal, String(gN   + 1), { expirationTtl: 90000 }),
+  ]);
+  return { limited: false };
 }

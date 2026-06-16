@@ -82,4 +82,42 @@ The deploy output prints your `*.workers.dev` URL.
   `{ prompt }`, never pick an expensive model or huge token count.
 - **Prompt length cap** (`MAX_PROMPT_CHARS`) blocks token bombs.
 - **Origin allowlist** (`ALLOWED_ORIGINS`) — edit this list if your domain
-  changes. Hardened further in step 2; KV rate limiting added in step 3.
+  changes. Hardened further in step 2.
+
+---
+
+## Step 3 — Rate limiting (Workers KV)
+
+The rate-limit code is already in `src/index.js`; it **only activates once a
+`RATE_LIMIT_KV` namespace is bound.** Until then the proxy runs without limits.
+
+The three caps live at the top of `src/index.js` — tune freely:
+
+```js
+const IP_PER_MIN     = 20;    // per-IP burst (requests / minute)
+const IP_PER_DAY     = 300;   // per-IP daily cap (one user can't drain the key)
+const GLOBAL_PER_DAY = 3000;  // total daily budget across ALL users (cost guard)
+```
+
+When a limit is hit the Worker returns HTTP 429 with `{ reason }`:
+`'rate'` (this device is going too fast/much) or `'quota'` (today's shared
+budget is spent). The app shows the matching notice; `'quota'` tells users it
+refreshes tomorrow or to use their own key. Buckets reset at **UTC midnight**.
+
+### Bind the KV namespace
+
+**Dashboard:**
+1. Cloudflare dashboard → **Storage & Databases → KV** → **Create a namespace**,
+   name it e.g. `convotrans-rate`.
+2. Worker `convotrans-proxy` → **Settings → Bindings → Add → KV namespace**.
+   - **Variable name**: `RATE_LIMIT_KV`  (must match exactly)
+   - **KV namespace**: pick `convotrans-rate`
+3. **Deploy**. Limits are now live.
+
+**CLI:**
+```bash
+cd worker
+wrangler kv namespace create RATE_LIMIT_KV   # prints an id
+# paste the id into the [[kv_namespaces]] block in wrangler.toml, then:
+wrangler deploy
+```
