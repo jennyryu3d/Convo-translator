@@ -6,7 +6,9 @@
 function ApiKeyBanner() {
   const [hasKey, setHasKey] = React.useState(!!window.CT_API.getKey());
   const [open, setOpen] = React.useState(false);
-  // reason: 'busy' (rate limited) | 'down' (proxy error) | 'manual' (settings)
+  // reason: 'busy' (upstream busy) | 'rate' (this device too fast/much) |
+  //         'quota' (today's free usage spent) | 'down' (proxy error) |
+  //         'manual' (opened from settings)
   const [reason, setReason] = React.useState('manual');
   // In an auto-triggered notice we hide the key input until the user opts in.
   const [showKeyInput, setShowKeyInput] = React.useState(false);
@@ -50,6 +52,16 @@ function ApiKeyBanner() {
       title: window.t('rateTitle'),
       body: window.t('rateBody'),
     },
+    rate: {
+      tag: window.t('slowTag'),
+      title: window.t('slowTitle'),
+      body: window.t('slowBody'),
+    },
+    quota: {
+      tag: window.t('quotaTag'),
+      title: window.t('quotaTitle'),
+      body: window.t('quotaBody'),
+    },
     down: {
       tag: window.t('connTag'),
       title: window.t('connTitle'),
@@ -91,11 +103,11 @@ function ApiKeyBanner() {
         {/* Auto-notice (busy/down): offer the key path as an option, not a demand. */}
         {!showKeyInput ? (
           <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
-            <button onClick={() => setOpen(false)} style={{
+            <button onClick={() => { setOpen(false); try { window.CT_API.retry(); } catch (e) {} }} style={{
               padding: '10px 20px', borderRadius: 999, border: 'none', cursor: 'pointer',
               background: '#96CDB0', color: '#081B1B', fontSize: 13, fontWeight: 700,
               fontFamily: 'inherit',
-            }}>{window.t('ok')}</button>
+            }}>{window.t('retry')}</button>
             <button onClick={() => setShowKeyInput(true)} style={{
               padding: '10px 16px', borderRadius: 999, border: 'none', cursor: 'pointer',
               background: 'transparent', color: '#487762', fontSize: 13, fontWeight: 600,

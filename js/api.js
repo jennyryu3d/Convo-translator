@@ -8,6 +8,12 @@
 window.CT_API = (function () {
   const KEY_STORAGE = 'ct_api_key_v1';
 
+  // Remembers the last PRIMARY action (the thing the user is waiting on) so the
+  // "retry" button in the connection notice can re-run exactly that.
+  let _lastAction = null;
+  function arm(fn)  { _lastAction = typeof fn === 'function' ? fn : null; }
+  function retry()  { const f = _lastAction; if (f) return f(); }
+
   // Serverless proxy endpoint. The owner's Anthropic key lives here, never in
   // the browser. See worker/ for the Cloudflare Worker that backs this.
   const PROXY_URL = 'https://convotrans-proxy.jenny3d.workers.dev/translate';
@@ -49,7 +55,8 @@ window.CT_API = (function () {
       if (res.status === 429 || res.status >= 500) {
         const err = new Error(msg);
         err.canFallback = true;
-        err.reason = res.status === 429 ? 'busy' : 'down';
+        // The proxy tags WHY (rate / quota / busy / down); default sensibly.
+        err.reason = data?.reason || (res.status === 429 ? 'busy' : 'down');
         throw err;
       }
       // Bad request / blocked origin etc. — a real error, no fallback.
@@ -82,7 +89,11 @@ window.CT_API = (function () {
     return text;
   }
 
-  async function complete(prompt) {
+  async function complete(prompt, opts) {
+    // Secondary calls (auto-suggestions, partner reply, word tap) pass
+    // { silent:true }: they self-heal with canned content, so they should NOT
+    // pop the notice — only the primary action the user is waiting on does.
+    const silent = !!(opts && opts.silent);
     // 1) Prefer the design-environment shim when present (free for the user).
     if (window.claude && typeof window.claude.complete === 'function') {
       return window.claude.complete(prompt);
@@ -93,14 +104,14 @@ window.CT_API = (function () {
     } catch (err) {
       if (!err || !err.canFallback) throw err;
       // 3) Proxy unreachable or rate-limited → fall back to the user's own key
-      //    if they've entered one; otherwise prompt for it.
+      //    if they've entered one; otherwise surface the notice.
       const key = getKey();
       if (key) return callAnthropic(key, prompt);
-      // No key: don't force key entry. Surface a friendly notice (with an
-      // optional "use my own key" path) by tagging the reason.
-      window.dispatchEvent(new CustomEvent('ct-api-key-needed', {
-        detail: { reason: err.reason || 'down' },
-      }));
+      if (!silent) {
+        window.dispatchEvent(new CustomEvent('ct-api-key-needed', {
+          detail: { reason: err.reason || 'down' },
+        }));
+      }
       throw new Error('API_KEY_NEEDED');
     }
   }
@@ -112,5 +123,5 @@ window.CT_API = (function () {
     return !(window.claude && typeof window.claude.complete === 'function');
   }
 
-  return { complete, getKey, setKey, clearKey, needsKey };
+  return { complete, getKey, setKey, clearKey, needsKey, arm, retry };
 })();
