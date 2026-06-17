@@ -21,6 +21,8 @@ function SettingsSheet({ palette, dark, onClose, target, native, skinId = 'blue'
     : _host.endsWith('jennyryu3d.com') ? 'https://convotrans.jennyryu3d.com'
     : ((typeof location !== 'undefined' && location.origin) || 'https://convotrans.krafton.run');
   const appUrlLabel = appUrl.replace(/^https?:\/\//, '');
+  // Copyright: company deploy = Krafton only; personal = JRyu / Krafton.
+  const copyright = _host.endsWith('krafton.run') ? '© 2026 Krafton, Inc.' : '© 2026 JRyu / Krafton';
 
   return (
     <div onClick={onClose} style={{
@@ -141,7 +143,7 @@ function SettingsSheet({ palette, dark, onClose, target, native, skinId = 'blue'
 
         <div style={{ padding: '14px 20px 0', textAlign: 'center', fontSize: 11, color: c.ink3, lineHeight: 1.5 }}>
           {window.t('tagline')}<br/>
-          © 2026 JRyu / Krafton
+          {copyright}
         </div>
       </div>
     </div>
