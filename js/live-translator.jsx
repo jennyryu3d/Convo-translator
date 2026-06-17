@@ -159,7 +159,7 @@ function LiveTranslator({ tweaks, setTweak }) {
   // Share the app: native share sheet (KakaoTalk, Messages, Mail…) on devices
   // that support it; copy the link to the clipboard as a fallback.
   async function handleShare() {
-    const url = 'https://convotrans.jennyryu3d.com';
+    const url = 'https://convotrans.krafton.run';
     const text = window.t('shareText');
     // Native share sheet: the recipient gets the intro line + the link together
     // (apps render text then url).

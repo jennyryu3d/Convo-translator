@@ -68,9 +68,9 @@ function SettingsSheet({ palette, dark, onClose, target, native, skinId = 'blue'
             padding: '12px 6px',
           }}>
             <span style={{ fontSize: 13, color: c.ink2, fontWeight: 500 }}>{window.t('appAddress')}</span>
-            <a href="https://convotrans.jennyryu3d.com" target="_blank" rel="noreferrer" style={{
+            <a href="https://convotrans.krafton.run" target="_blank" rel="noreferrer" style={{
               fontSize: 13, fontWeight: 700, color: c.primary, textDecoration: 'none',
-            }}>convotrans.jennyryu3d.com</a>
+            }}>convotrans.krafton.run</a>
           </div>
           <div style={{
             display: 'flex', alignItems: 'center', justifyContent: 'space-between',
