@@ -15,6 +15,14 @@ function SettingsSheet({ palette, dark, onClose, target, native, skinId = 'blue'
   const tgt = window.CT_LANG.byCode(target);
   const nat = window.CT_LANG.byCode(native);
   const sttOK = window.CT_RECOGNIZE && window.CT_RECOGNIZE.supported();
+  // App address auto-matches the current deployment (company KP vs personal).
+  const _host = (typeof location !== 'undefined' && location.hostname) || '';
+  const appUrl = _host.endsWith('krafton.run') ? 'https://convotrans.krafton.run'
+    : _host.endsWith('jennyryu3d.com') ? 'https://convotrans.jennyryu3d.com'
+    : ((typeof location !== 'undefined' && location.origin) || 'https://convotrans.krafton.run');
+  const appUrlLabel = appUrl.replace(/^https?:\/\//, '');
+  // Copyright: company deploy = Krafton only; personal = JRyu / Krafton.
+  const copyright = _host.endsWith('krafton.run') ? '© 2026 Krafton, Inc.' : '© 2026 JRyu / Krafton';
 
   return (
     <div onClick={onClose} style={{
@@ -28,11 +36,21 @@ function SettingsSheet({ palette, dark, onClose, target, native, skinId = 'blue'
         @keyframes setSlide { from { transform: translateY(100%); } to { transform: none; } }
       `}</style>
       <div onClick={e => e.stopPropagation()} style={{
+        position: 'relative',
         width: '100%', background: c.surface, borderRadius: '24px 24px 0 0',
         padding: '10px 0 22px',
         animation: 'setSlide .22s ease-out',
         boxShadow: '0 -8px 24px rgba(8,27,27,0.18)',
       }}>
+        {/* Close (X) — closes settings and returns to the app */}
+        <button onClick={onClose} aria-label="닫기" style={{
+          position: 'absolute', top: 10, right: 12, zIndex: 2,
+          width: 32, height: 32, borderRadius: 999, border: 'none', cursor: 'pointer',
+          background: c.bg, color: c.ink2,
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+        }}>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
+        </button>
         <div style={{ width: 36, height: 4, borderRadius: 999, background: c.divider, margin: '0 auto 16px' }} />
 
         {/* App identity */}
@@ -68,9 +86,9 @@ function SettingsSheet({ palette, dark, onClose, target, native, skinId = 'blue'
             padding: '12px 6px',
           }}>
             <span style={{ fontSize: 13, color: c.ink2, fontWeight: 500 }}>{window.t('appAddress')}</span>
-            <a href="https://convotrans.jennyryu3d.com" target="_blank" rel="noreferrer" style={{
+            <a href={appUrl} target="_blank" rel="noreferrer" style={{
               fontSize: 13, fontWeight: 700, color: c.primary, textDecoration: 'none',
-            }}>convotrans.jennyryu3d.com</a>
+            }}>{appUrlLabel}</a>
           </div>
           <div style={{
             display: 'flex', alignItems: 'center', justifyContent: 'space-between',
@@ -125,7 +143,7 @@ function SettingsSheet({ palette, dark, onClose, target, native, skinId = 'blue'
 
         <div style={{ padding: '14px 20px 0', textAlign: 'center', fontSize: 11, color: c.ink3, lineHeight: 1.5 }}>
           {window.t('tagline')}<br/>
-          © 2026 Krafton, Inc.
+          {copyright}
         </div>
       </div>
     </div>

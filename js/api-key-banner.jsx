@@ -103,16 +103,11 @@ function ApiKeyBanner() {
         {/* Auto-notice (busy/down): offer the key path as an option, not a demand. */}
         {!showKeyInput ? (
           <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
-            <button onClick={() => { setOpen(false); try { window.CT_API.retry(); } catch (e) {} }} style={{
+            <button onClick={() => setOpen(false)} style={{
               padding: '10px 20px', borderRadius: 999, border: 'none', cursor: 'pointer',
               background: '#96CDB0', color: '#081B1B', fontSize: 13, fontWeight: 700,
               fontFamily: 'inherit',
-            }}>{window.t('retry')}</button>
-            <button onClick={() => setShowKeyInput(true)} style={{
-              padding: '10px 16px', borderRadius: 999, border: 'none', cursor: 'pointer',
-              background: 'transparent', color: '#487762', fontSize: 13, fontWeight: 600,
-              fontFamily: 'inherit', textDecoration: 'underline',
-            }}>{window.t('useMyKey')}</button>
+            }}>{window.t('ok')}</button>
           </div>
         ) : (
         <React.Fragment>
