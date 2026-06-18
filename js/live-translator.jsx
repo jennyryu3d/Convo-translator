@@ -159,7 +159,11 @@ function LiveTranslator({ tweaks, setTweak }) {
   // Share the app: native share sheet (KakaoTalk, Messages, Mail…) on devices
   // that support it; copy the link to the clipboard as a fallback.
   async function handleShare() {
-    const url = 'https://convotrans.jennyryu3d.com';
+    // Share link auto-matches the current deployment (company KP vs personal).
+    const _h = (typeof location !== 'undefined' && location.hostname) || '';
+    const url = _h.endsWith('krafton.run') ? 'https://convotrans.krafton.run'
+      : _h.endsWith('jennyryu3d.com') ? 'https://convotrans.jennyryu3d.com'
+      : ((typeof location !== 'undefined' && location.origin) || 'https://convotrans.krafton.run');
     const text = window.t('shareText');
     // Native share sheet: the recipient gets the intro line + the link together
     // (apps render text then url).
@@ -469,7 +473,7 @@ function LiveTranslator({ tweaks, setTweak }) {
             locked = laterPicked;
           }
           return (
-            <TheirBubbleStyled key={m.id} msg={m} palette={c} dark={dark} radius={bubbleRadius} shadow={shadowStr} fontScale={fontScale} native={native}>
+            <TheirBubbleStyled key={m.id} msg={m} palette={c} dark={dark} radius={bubbleRadius} shadow={shadowStr} fontScale={fontScale} native={native} aiPartner={appMode === 'practice'}>
               {m.suggestions && (
                 <SuggestionDisplay
                   variant={tweaks.suggStyle}
@@ -657,7 +661,7 @@ function MyBubbleStyled({ msg, palette, radius, shadow, fontScale }) {
   );
 }
 
-function TheirBubbleStyled({ msg, palette, dark, children, radius, shadow, fontScale, native = 'KO' }) {
+function TheirBubbleStyled({ msg, palette, dark, children, radius, shadow, fontScale, native = 'KO', aiPartner = false }) {
   const c = palette;
   const nativeLang = window.CT_LANG.byCode(native);
   return (
@@ -675,7 +679,7 @@ function TheirBubbleStyled({ msg, palette, dark, children, radius, shadow, fontS
         <div style={{
           fontSize: 10 * fontScale, fontWeight: 800, color: c.ink2, letterSpacing: 0.6,
           textTransform: 'uppercase',
-        }}>{window.t('them')}</div>
+        }}>{window.t(aiPartner ? 'themAI' : 'them')}</div>
       </div>
       <div style={{ maxWidth: '92%', width: '100%' }}>
         <div style={{
