@@ -36,7 +36,7 @@ window.CT_UI = {
   EN: {
     yourLanguage: "Other's language", myLanguage: 'My language',
     meSent: 'Me · Sent', asIs: 'As-is', corrected: '✏ Corrected', correctedMine: 'Corrected · my input', myInput: 'My input',
-    them: 'Other', translation: 'Translation',
+    them: 'Other', themAI: 'AI partner', translation: 'Translation',
     liveMode: 'Live chat', learnMode: 'Practice mode',
     whoSpeaksHint: "Tap who's speaking, then talk", processing: 'Processing…', listeningTapDone: 'Listening · tap to finish',
     iSpeak: "I'll speak", theySpeak: 'They speak', suggest3: '3 suggestions',
@@ -117,7 +117,7 @@ window.CT_UI = {
   KO: {
     yourLanguage: '상대방 언어', myLanguage: '내 언어',
     meSent: '나 · 전송됨', asIs: '그대로', corrected: '✏ 정정됨', correctedMine: '정정됨 · 내 입력', myInput: '내 입력',
-    them: '상대방', translation: '번역',
+    them: '상대방', themAI: 'AI 상대방', translation: '번역',
     liveMode: '실시간 대화', learnMode: '학습 모드',
     whoSpeaksHint: '누가 말하는지 누른 뒤 말하세요', processing: '처리 중…', listeningTapDone: '듣는 중 · 탭하면 완료',
     iSpeak: '내가 말하기', theySpeak: '상대방 말하기', suggest3: '제안 3개',
