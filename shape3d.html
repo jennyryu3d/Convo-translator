@@ -1,0 +1,415 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1.0,viewport-fit=cover" />
+  <title>3D 삼각 도형 — DXF 내보내기</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="convotrans-design/colors_and_type.css">
+  <style>
+    :root {
+      --brand-ink:    #081B1B;
+      --brand-forest: #203B37;
+      --brand-sage:   #5A8F76;
+      --brand-mint:   #96CDB0;
+      --brand-copper: #C18D52;
+      --brand-cream:  #EEE8B2;
+    }
+    * { box-sizing: border-box; }
+    html, body {
+      margin: 0; padding: 0; height: 100%; width: 100%;
+      background: var(--brand-ink);
+      color: #EAF2EE;
+      font-family: 'Plus Jakarta Sans', -apple-system, system-ui, sans-serif;
+      overflow: hidden;
+    }
+    #app { display: flex; height: 100%; width: 100%; }
+
+    /* ── Viewer canvas ────────────────────────────────── */
+    #viewer { position: relative; flex: 1 1 auto; min-width: 0; }
+    #viewer canvas { display: block; width: 100%; height: 100%; }
+    #hint {
+      position: absolute; left: 14px; bottom: 14px;
+      font-size: 12px; font-weight: 500; color: rgba(234,242,238,0.55);
+      background: rgba(8,27,27,0.45); padding: 6px 10px; border-radius: 8px;
+      pointer-events: none; backdrop-filter: blur(4px);
+    }
+
+    /* ── Control panel ────────────────────────────────── */
+    #panel {
+      flex: 0 0 320px; max-width: 320px;
+      background: var(--brand-forest);
+      border-left: 1px solid rgba(150,205,176,0.15);
+      padding: 22px 20px; overflow-y: auto;
+      display: flex; flex-direction: column; gap: 18px;
+    }
+    .brand {
+      font-family: 'Chakra Petch', sans-serif;
+      font-weight: 700; font-size: 19px; letter-spacing: -0.2px;
+      color: var(--brand-mint); display: flex; align-items: center; gap: 8px;
+    }
+    .brand small {
+      display: block; font-family: 'Plus Jakarta Sans', sans-serif;
+      font-weight: 500; font-size: 12px; color: rgba(234,242,238,0.6);
+      letter-spacing: 0; margin-top: 3px;
+    }
+    .field { display: flex; flex-direction: column; gap: 6px; }
+    .field label {
+      font-size: 12px; font-weight: 700; color: var(--brand-cream);
+      letter-spacing: 0.2px; text-transform: uppercase;
+    }
+    .field .unit { color: rgba(234,242,238,0.5); font-weight: 500; text-transform: none; }
+    .field input[type="number"] {
+      font-family: 'JetBrains Mono', monospace; font-size: 15px;
+      background: var(--brand-ink); color: #EAF2EE;
+      border: 1px solid rgba(150,205,176,0.25); border-radius: 10px;
+      padding: 10px 12px; width: 100%; outline: none;
+    }
+    .field input[type="number"]:focus { border-color: var(--brand-mint); }
+    .field .row { display: flex; align-items: center; gap: 8px; }
+    input[type="range"] { width: 100%; accent-color: var(--brand-mint); }
+
+    .divider { height: 1px; background: rgba(150,205,176,0.15); margin: 2px 0; }
+
+    .readout {
+      font-family: 'JetBrains Mono', monospace; font-size: 12px;
+      color: rgba(234,242,238,0.75); line-height: 1.7;
+      background: var(--brand-ink); border-radius: 10px; padding: 12px 14px;
+    }
+    .readout b { color: var(--brand-mint); font-weight: 500; }
+    .readout .warn { color: #f0a35a; }
+
+    .btn {
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      font-weight: 800; font-size: 15px; letter-spacing: 0.1px;
+      border: none; border-radius: 12px; padding: 14px 16px;
+      cursor: pointer; transition: transform .08s ease, filter .15s ease;
+      display: flex; align-items: center; justify-content: center; gap: 8px;
+    }
+    .btn:active { transform: translateY(1px); }
+    .btn-primary { background: var(--brand-mint); color: var(--brand-ink); }
+    .btn-primary:hover { filter: brightness(1.06); }
+    .btn-primary:disabled { opacity: .4; cursor: not-allowed; }
+    .btn-ghost {
+      background: transparent; color: var(--brand-cream);
+      border: 1px solid rgba(193,141,82,0.5); font-weight: 700; font-size: 13px;
+      padding: 10px 14px;
+    }
+    .btn-ghost:hover { background: rgba(193,141,82,0.12); }
+
+    .toggle-row { display: flex; gap: 8px; }
+    .toggle-row .btn-ghost { flex: 1; }
+    .toggle-row .btn-ghost.on { background: rgba(150,205,176,0.18); border-color: var(--brand-mint); color: var(--brand-mint); }
+
+    .spacer { flex: 1 1 auto; }
+    .foot { font-size: 11px; color: rgba(234,242,238,0.4); line-height: 1.6; }
+
+    @media (max-width: 720px) {
+      #app { flex-direction: column-reverse; }
+      #panel { flex-basis: auto; max-width: none; border-left: none; border-top: 1px solid rgba(150,205,176,0.15); }
+      #viewer { min-height: 44vh; }
+    }
+  </style>
+
+  <script src="vendor/three/three.min.js"></script>
+  <script src="vendor/three/OrbitControls.js"></script>
+</head>
+<body>
+  <div id="app">
+    <div id="viewer">
+      <div id="hint">드래그: 회전 · 휠: 확대/축소 · 우클릭 드래그: 이동</div>
+    </div>
+
+    <aside id="panel">
+      <div class="brand">
+        △ 3D 삼각 도형
+        <span></span>
+      </div>
+      <div class="brand"><small>치수를 입력하고 CAD용 DXF로 내보내세요.</small></div>
+
+      <div class="field">
+        <label>밑변 <span class="unit">base (cm)</span></label>
+        <input id="in-base" type="number" step="0.1" min="0.1" value="4.5" />
+      </div>
+      <div class="field">
+        <label>빗변 (좌우 2면) <span class="unit">sides (cm)</span></label>
+        <input id="in-side" type="number" step="0.1" min="0.1" value="5" />
+      </div>
+      <div class="field">
+        <label>두께 <span class="unit">thickness (cm)</span></label>
+        <input id="in-thick" type="number" step="0.1" min="0.1" value="2" />
+      </div>
+
+      <div class="divider"></div>
+
+      <div class="readout" id="readout"></div>
+
+      <div class="toggle-row">
+        <button class="btn btn-ghost on" id="tg-edges">모서리</button>
+        <button class="btn btn-ghost on" id="tg-grid">격자</button>
+        <button class="btn btn-ghost" id="tg-wire">와이어프레임</button>
+      </div>
+
+      <button class="btn btn-primary" id="btn-dxf">⬇  DXF 다운로드</button>
+      <button class="btn btn-ghost" id="btn-reset">뷰 초기화</button>
+
+      <div class="spacer"></div>
+      <div class="foot">
+        DXF는 3DFACE 엔티티로 내보내며 단위는 센티미터(cm)입니다.
+        AutoCAD, Fusion 360, FreeCAD 등 대부분의 CAD에서 열립니다.
+      </div>
+    </aside>
+  </div>
+
+  <script>
+  (function () {
+    'use strict';
+
+    // ── Geometry math ──────────────────────────────────────────────
+    // Isosceles triangle: base along X, apex centered above the base.
+    // A=(0,0), B=(base,0), C=(base/2, height).
+    // height derived from the two equal side lengths via Pythagoras.
+    // Returns null when the sides can't form a triangle (triangle inequality).
+    function triangle(base, side) {
+      const half = base / 2;
+      const h2 = side * side - half * half;   // height² = side² − (base/2)²
+      if (h2 <= 0) return null;               // sides too short to close the apex
+      const h = Math.sqrt(h2);
+      return {
+        A: { x: 0, y: 0 },
+        B: { x: base, y: 0 },
+        C: { x: half, y: h },
+        height: h,
+      };
+    }
+
+    // Build the 6 flat faces of the triangular prism as {verts:[{x,y,z}...]}.
+    // Bottom + top triangles, and 3 rectangular side quads. Shared by both
+    // the DXF exporter and (conceptually) the 3D mesh below.
+    function prismFaces(tri, thick) {
+      const t = thick;
+      const A = tri.A, B = tri.B, C = tri.C;
+      const b0 = { x: A.x, y: A.y, z: 0 }, b1 = { x: B.x, y: B.y, z: 0 }, b2 = { x: C.x, y: C.y, z: 0 };
+      const t0 = { x: A.x, y: A.y, z: t }, t1 = { x: B.x, y: B.y, z: t }, t2 = { x: C.x, y: C.y, z: t };
+      return [
+        { verts: [b0, b1, b2] },        // bottom triangle
+        { verts: [t0, t2, t1] },        // top triangle (reversed for outward normal)
+        { verts: [b0, t0, t1, b1] },    // side A→B
+        { verts: [b1, t1, t2, b2] },    // side B→C
+        { verts: [b2, t2, t0, b0] },    // side C→A
+      ];
+    }
+
+    // ── DXF export (R12 ASCII, 3DFACE entities, units = cm) ─────────
+    function buildDXF(tri, thick) {
+      const faces = prismFaces(tri, thick);
+      const L = [];
+      const p = (code, val) => { L.push(code); L.push(val); };
+
+      // HEADER — declare drawing units as centimeters ($INSUNITS = 5).
+      p(0, 'SECTION'); p(2, 'HEADER');
+      p(9, '$ACADVER'); p(1, 'AC1009');
+      p(9, '$INSUNITS'); p(70, 5);
+      p(0, 'ENDSEC');
+
+      // ENTITIES — one 3DFACE per face. Triangles repeat the last vertex.
+      p(0, 'SECTION'); p(2, 'ENTITIES');
+      for (const f of faces) {
+        const v = f.verts.slice();
+        if (v.length === 3) v.push(v[2]);      // 3DFACE needs 4 corners
+        p(0, '3DFACE'); p(8, 'TRIANGLE');
+        for (let i = 0; i < 4; i++) {
+          p(10 + i, fix(v[i].x));
+          p(20 + i, fix(v[i].y));
+          p(30 + i, fix(v[i].z));
+        }
+      }
+      p(0, 'ENDSEC');
+      p(0, 'EOF');
+
+      return L.join('\r\n') + '\r\n';
+    }
+    function fix(n) { return (Math.round(n * 1e6) / 1e6).toString(); }
+
+    function download(filename, text) {
+      const blob = new Blob([text], { type: 'application/dxf' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url; a.download = filename;
+      document.body.appendChild(a); a.click();
+      document.body.removeChild(a);
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+    }
+
+    // ── Three.js scene ──────────────────────────────────────────────
+    const viewer = document.getElementById('viewer');
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(0x081B1B);
+
+    const camera = new THREE.PerspectiveCamera(45, 1, 0.1, 1000);
+    const renderer = new THREE.WebGLRenderer({ antialias: true });
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    viewer.appendChild(renderer.domElement);
+
+    const controls = new THREE.OrbitControls(camera, renderer.domElement);
+    controls.enableDamping = true;
+    controls.dampingFactor = 0.08;
+
+    // Lights
+    scene.add(new THREE.AmbientLight(0xffffff, 0.55));
+    const key = new THREE.DirectionalLight(0xffffff, 0.85); key.position.set(6, 10, 8); scene.add(key);
+    const rim = new THREE.DirectionalLight(0x96CDB0, 0.35); rim.position.set(-8, 4, -6); scene.add(rim);
+
+    // Grid on the XY-ish ground (rotated so it lies under the shape's base)
+    let grid = new THREE.GridHelper(40, 40, 0x5A8F76, 0x203B37);
+    grid.material.opacity = 0.35; grid.material.transparent = true;
+    scene.add(grid);
+
+    // Group holds the mesh + edges so we can swap geometry cleanly.
+    const group = new THREE.Group();
+    scene.add(group);
+
+    let mesh = null, edges = null;
+    const matSolid = new THREE.MeshStandardMaterial({
+      color: 0x96CDB0, metalness: 0.15, roughness: 0.55,
+      side: THREE.DoubleSide, flatShading: true,
+    });
+    const matWire = new THREE.MeshBasicMaterial({ color: 0x96CDB0, wireframe: true });
+    const matEdge = new THREE.LineBasicMaterial({ color: 0x081B1B });
+
+    let show = { edges: true, grid: true, wire: false };
+
+    function rebuild(tri, thick) {
+      // Clear previous
+      group.clear();
+      mesh = edges = null;
+
+      // Build an extruded triangle. Shape is in the XY plane; extrude along Z,
+      // then rotate so thickness stands up along world-Y for a natural view.
+      const shape = new THREE.Shape();
+      shape.moveTo(tri.A.x, tri.A.y);
+      shape.lineTo(tri.B.x, tri.B.y);
+      shape.lineTo(tri.C.x, tri.C.y);
+      shape.closePath();
+
+      const geo = new THREE.ExtrudeGeometry(shape, { depth: thick, bevelEnabled: false });
+      geo.center();
+
+      mesh = new THREE.Mesh(geo, show.wire ? matWire : matSolid);
+      group.add(mesh);
+
+      edges = new THREE.LineSegments(new THREE.EdgesGeometry(geo, 1), matEdge);
+      edges.visible = show.edges && !show.wire;
+      group.add(edges);
+
+      // Sit the shape a touch above the grid.
+      const box = new THREE.Box3().setFromObject(mesh);
+      group.position.y = -box.min.y;
+      grid.position.y = 0;
+
+      applyToggles();
+    }
+
+    function applyToggles() {
+      if (mesh) mesh.material = show.wire ? matWire : matSolid;
+      if (edges) edges.visible = show.edges && !show.wire;
+      grid.visible = show.grid;
+    }
+
+    function frameCamera(tri, thick) {
+      const span = Math.max(tri.B.x, tri.height, thick);
+      const d = span * 2.4;
+      camera.position.set(d * 0.75, d * 0.7, d);
+      controls.target.set(0, thick * 0.15, 0);
+      controls.update();
+    }
+
+    function resize() {
+      const w = viewer.clientWidth, h = viewer.clientHeight;
+      renderer.setSize(w, h, false);
+      camera.aspect = w / h; camera.updateProjectionMatrix();
+    }
+    window.addEventListener('resize', resize);
+
+    (function loop() {
+      requestAnimationFrame(loop);
+      controls.update();
+      renderer.render(scene, camera);
+    })();
+
+    // ── Wiring ──────────────────────────────────────────────────────
+    const inBase = document.getElementById('in-base');
+    const inSide = document.getElementById('in-side');
+    const inThick = document.getElementById('in-thick');
+    const readout = document.getElementById('readout');
+    const btnDxf = document.getElementById('btn-dxf');
+
+    let current = null;   // { tri, base, side, thick }
+
+    function update(reframe) {
+      const base = parseFloat(inBase.value);
+      const side = parseFloat(inSide.value);
+      const thick = parseFloat(inThick.value);
+
+      if (!(base > 0) || !(side > 0) || !(thick > 0)) {
+        readout.innerHTML = '<span class="warn">⚠ 모든 치수는 0보다 커야 합니다.</span>';
+        btnDxf.disabled = true; current = null; return;
+      }
+      const tri = triangle(base, side);
+      if (!tri) {
+        readout.innerHTML = '<span class="warn">⚠ 빗변이 너무 짧아 삼각형을 만들 수 없습니다.<br>빗변 &gt; 밑변 ÷ 2 이어야 합니다.</span>';
+        btnDxf.disabled = true; current = null; return;
+      }
+
+      current = { tri, base, side, thick };
+      const area = base * tri.height / 2;
+      const vol = area * thick;
+      readout.innerHTML =
+        `삼각형: 밑변 <b>${base}</b> · 빗변 <b>${side} × 2</b><br>` +
+        `높이(삼각형): <b>${tri.height.toFixed(3)}</b> cm<br>` +
+        `두께: <b>${thick}</b> cm<br>` +
+        `단면적: <b>${area.toFixed(3)}</b> cm²<br>` +
+        `부피: <b>${vol.toFixed(3)}</b> cm³`;
+      btnDxf.disabled = false;
+
+      rebuild(tri, thick);
+      if (reframe) frameCamera(tri, thick);
+    }
+
+    inBase.addEventListener('input', () => update(false));
+    inSide.addEventListener('input', () => update(false));
+    inThick.addEventListener('input', () => update(false));
+
+    btnDxf.addEventListener('click', () => {
+      if (!current) return;
+      const { tri, base, side, thick } = current;
+      const name = `triangle_${base}x${side}x${side}_t${thick}cm.dxf`;
+      download(name, buildDXF(tri, thick));
+    });
+
+    document.getElementById('btn-reset').addEventListener('click', () => {
+      if (current) frameCamera(current.tri, current.thick);
+    });
+
+    // Toggle buttons
+    function bindToggle(id, key) {
+      const el = document.getElementById(id);
+      el.addEventListener('click', () => {
+        show[key] = !show[key];
+        el.classList.toggle('on', show[key]);
+        applyToggles();
+      });
+    }
+    bindToggle('tg-edges', 'edges');
+    bindToggle('tg-grid', 'grid');
+    bindToggle('tg-wire', 'wire');
+
+    // ── Boot ────────────────────────────────────────────────────────
+    resize();
+    update(true);
+  })();
+  </script>
+</body>
+</html>
