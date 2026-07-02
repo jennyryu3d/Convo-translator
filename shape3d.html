@@ -70,6 +70,11 @@
       font-weight: 700; font-size: 19px; letter-spacing: -0.2px;
       color: var(--brand-mint);
     }
+    .brand #ver-panel {
+      font-family: 'JetBrains Mono', monospace; font-size: 11px; font-weight: 500;
+      color: var(--brand-ink); background: var(--brand-copper);
+      padding: 2px 8px; border-radius: 999px; vertical-align: middle; margin-left: 4px;
+    }
     .brand small {
       display: block; font-family: 'Plus Jakarta Sans', sans-serif;
       font-weight: 500; font-size: 12px; color: rgba(234,242,238,0.6);
@@ -152,8 +157,8 @@
 
     <aside id="panel">
       <div class="brand">
-        △ 3D 삼각 도형 편집기
-        <small>꼭짓점을 드래그하거나 세 변 길이를 입력해 편집하고, CAD용 DXF로 내보내세요.</small>
+        △ 3D 삼각 도형 편집기 <span id="ver-panel"></span>
+        <small>꼭짓점을 드래그하거나, 세 변 길이·세 각도를 입력해 편집하고 CAD용 DXF로 내보내세요.</small>
       </div>
 
       <div class="section-title">세 변 길이</div>
@@ -168,6 +173,21 @@
       <div class="field">
         <label><span class="dot" style="background:#EEE8B2"></span> 변 CA <span class="unit">cm</span></label>
         <div class="row"><input id="in-b" type="number" step="0.1" min="0.1" value="5" /><input id="rg-b" type="range" min="0.5" max="20" step="0.1" value="5" /></div>
+      </div>
+
+      <div class="divider"></div>
+      <div class="section-title">세 각 (도)</div>
+      <div class="field">
+        <label><span class="dot" style="background:#96CDB0"></span> 각 A <span class="unit">°</span></label>
+        <div class="row"><input id="in-angA" type="number" step="0.5" min="1" max="179" value="63.3" /><input id="rg-angA" type="range" min="1" max="179" step="0.5" value="63.3" /></div>
+      </div>
+      <div class="field">
+        <label><span class="dot" style="background:#C18D52"></span> 각 B <span class="unit">°</span></label>
+        <div class="row"><input id="in-angB" type="number" step="0.5" min="1" max="179" value="63.3" /><input id="rg-angB" type="range" min="1" max="179" step="0.5" value="63.3" /></div>
+      </div>
+      <div class="field">
+        <label><span class="dot" style="background:#EEE8B2"></span> 각 C <span class="unit">°</span></label>
+        <div class="row"><input id="in-angC" type="number" step="0.5" min="1" max="179" value="53.5" /><input id="rg-angC" type="range" min="1" max="179" step="0.5" value="53.5" /></div>
       </div>
 
       <div class="divider"></div>
@@ -207,7 +227,7 @@
 
     // Bump this on every change; the tag shows in the viewer's top-right so a
     // refresh visibly confirms the newest deploy is live. (date = 릴리스일)
-    const APP_VERSION = 'v1.3 · 2026-07-02';
+    const APP_VERSION = 'v1.4 · 2026-07-02';
 
     // ══════════════════════════════════════════════════════════════
     //  MODEL — a shape is a 2D polygon (cm) extruded by `thick` (cm).
@@ -261,6 +281,24 @@
       const y2 = b * b - x * x;
       if (y2 <= 0) return null;
       return [ { x: 0, y: 0 }, { x: c, y: 0 }, { x, y: Math.sqrt(y2) } ];
+    }
+    // Rebuild after editing ONE interior angle. The two sides meeting at that
+    // vertex (its "arms") are kept; the opposite side is recomputed by the law
+    // of cosines, then the triangle is solved via SSS. The other two angles
+    // adjust automatically so the sum stays 180°.
+    //   which = 'A' | 'B' | 'C', deg = new angle in degrees.
+    function fromAngle(which, deg, cur) {
+      if (!(deg > 0 && deg < 180)) return null;
+      const r = deg * Math.PI / 180, cos = Math.cos(r);
+      let { a, b, c } = cur;                 // c=AB, a=BC, b=CA
+      if (which === 'A') {                   // arms b,c → opposite a
+        a = Math.sqrt(Math.max(0, b * b + c * c - 2 * b * c * cos));
+      } else if (which === 'B') {            // arms a,c → opposite b
+        b = Math.sqrt(Math.max(0, a * a + c * c - 2 * a * c * cos));
+      } else {                              // C: arms a,b → opposite c
+        c = Math.sqrt(Math.max(0, a * a + b * b - 2 * a * b * cos));
+      }
+      return fromSides(c, a, b);
     }
 
     // Build the prism faces for DXF: base at z=0, top at z=thick.
@@ -489,14 +527,18 @@
     const el = id => document.getElementById(id);
     const inC = el('in-c'), inA = el('in-a'), inB = el('in-b'), inT = el('in-thick');
     const rgC = el('rg-c'), rgA = el('rg-a'), rgB = el('rg-b'), rgT = el('rg-thick');
+    const inAngA = el('in-angA'), inAngB = el('in-angB'), inAngC = el('in-angC');
+    const rgAngA = el('rg-angA'), rgAngB = el('rg-angB'), rgAngC = el('rg-angC');
     const readout = el('readout'), btnDxf = el('btn-dxf');
     let valid = true;
 
-    // Push current geometry back into the numeric inputs + sliders (after a drag).
+    // Push current geometry back into the numeric inputs + sliders. Called after
+    // any change (drag, side edit, angle edit) so all fields stay in sync.
     function refreshInputs() {
-      const s = sides(state.verts);
-      const put = (numEl, rngEl, val) => { const r = val.toFixed(2); numEl.value = r; rngEl.value = clampRange(rngEl, val); };
-      put(inC, rgC, s.c); put(inA, rgA, s.a); put(inB, rgB, s.b);
+      const s = sides(state.verts), g = angles(state.verts);
+      const put = (numEl, rngEl, val, dp) => { numEl.value = val.toFixed(dp); rngEl.value = clampRange(rngEl, val); };
+      put(inC, rgC, s.c, 2); put(inA, rgA, s.a, 2); put(inB, rgB, s.b, 2);
+      put(inAngA, rgAngA, g.A, 1); put(inAngB, rgAngB, g.B, 1); put(inAngC, rgAngC, g.C, 1);
       inT.value = state.thick.toFixed(2); rgT.value = clampRange(rgT, state.thick);
     }
     function clampRange(rng, v) {
@@ -531,7 +573,16 @@
       if (!v) { invalid('세 변으로 삼각형을 만들 수 없습니다.<br>각 변은 나머지 두 변의 합보다 짧아야 합니다.'); return; }
       valid = true; btnDxf.disabled = false;
       state.verts = v; state.thick = t;
-      rebuild(); refreshReadout();
+      rebuild(); refreshInputs(); refreshReadout();   // sides changed → refresh angles too
+    }
+    // Angle edit → keep the two arms at that vertex, recompute via law of cosines.
+    function applyAngle(which, inEl) {
+      const deg = parseFloat(inEl.value);
+      const v = fromAngle(which, deg, sides(state.verts));
+      if (!v) { invalid(`각 ${which}는 0°보다 크고 180°보다 작아야 합니다.`); return; }
+      valid = true; btnDxf.disabled = false;
+      state.verts = v;
+      rebuild(); refreshInputs(); refreshReadout();   // angle changed → refresh sides + other angles
     }
     function invalid(msg) {
       valid = false; btnDxf.disabled = true;
@@ -546,6 +597,9 @@
     pair(inC, rgC, applySides);
     pair(inA, rgA, applySides);
     pair(inB, rgB, applySides);
+    pair(inAngA, rgAngA, () => applyAngle('A', inAngA));
+    pair(inAngB, rgAngB, () => applyAngle('B', inAngB));
+    pair(inAngC, rgAngC, () => applyAngle('C', inAngC));
     pair(inT, rgT, () => { const t = parseFloat(inT.value); if (t > 0) { state.thick = t; rebuild(); refreshReadout(); } });
 
     btnDxf.addEventListener('click', () => {
@@ -576,6 +630,7 @@
 
     // ── Boot ────────────────────────────────────────────────────────
     el('version').textContent = APP_VERSION;
+    el('ver-panel').textContent = APP_VERSION;
     resize();
     buildHandles();
     rebuild();
