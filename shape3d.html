@@ -45,6 +45,18 @@
     }
     #badge.on { display: block; }
 
+    /* Version tag — bump APP_VERSION on every change so a refresh visibly
+       confirms the latest deploy is live. */
+    #version {
+      position: absolute; right: 14px; top: 14px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px; font-weight: 500; letter-spacing: .3px;
+      color: var(--brand-cream); background: rgba(8,27,27,0.5);
+      border: 1px solid rgba(193,141,82,0.4);
+      padding: 5px 10px; border-radius: 999px; pointer-events: none;
+      backdrop-filter: blur(4px);
+    }
+
     /* ── Control panel ────────────────────────────────── */
     #panel {
       flex: 0 0 330px; max-width: 330px;
@@ -133,6 +145,7 @@
 <body>
   <div id="app">
     <div id="viewer">
+      <div id="version"></div>
       <div id="badge">✎ 편집 모드 — 꼭짓점을 드래그하세요</div>
       <div id="hint">드래그: 회전 · 휠: 확대/축소 · 우클릭 드래그: 이동<br>편집 모드에서 색점(꼭짓점)을 끌면 모양이 바뀝니다</div>
     </div>
@@ -191,6 +204,10 @@
   <script>
   (function () {
     'use strict';
+
+    // Bump this on every change; the tag shows in the viewer's top-right so a
+    // refresh visibly confirms the newest deploy is live. (date = 릴리스일)
+    const APP_VERSION = 'v1.3 · 2026-07-02';
 
     // ══════════════════════════════════════════════════════════════
     //  MODEL — a shape is a 2D polygon (cm) extruded by `thick` (cm).
@@ -558,6 +575,7 @@
     bindToggle('tg-wire', 'wire');
 
     // ── Boot ────────────────────────────────────────────────────────
+    el('version').textContent = APP_VERSION;
     resize();
     buildHandles();
     rebuild();
